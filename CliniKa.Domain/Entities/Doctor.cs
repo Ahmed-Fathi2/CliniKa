@@ -1,0 +1,21 @@
+using System;
+using System.Collections.Generic;
+
+namespace CliniKa.Domain.Entities
+{
+    public class Doctor
+    {
+        public int Id { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string? Specialty { get; set; }
+        public string LicenseNumber { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // Identity link
+        public string UserId { get; set; } = string.Empty;
+        public virtual ApplicationUser User { get; set; } = null!;
+
+        // Navigation properties
+        public virtual ICollection<ClinicalSession> ClinicalSessions { get; set; } = new List<ClinicalSession>();
+    }
+}

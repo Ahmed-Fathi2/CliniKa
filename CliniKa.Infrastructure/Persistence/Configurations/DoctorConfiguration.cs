@@ -1,0 +1,45 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using CliniKa.Domain.Entities;
+
+namespace CliniKa.Infrastructure.Persistence.Configurations
+{
+    public class DoctorConfiguration : IEntityTypeConfiguration<Doctor>
+    {
+        public void Configure(EntityTypeBuilder<Doctor> builder)
+        {
+            builder.ToTable("Doctors");
+
+            builder.HasKey(d => d.Id);
+
+            builder.Property(d => d.FullName)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            builder.Property(d => d.Specialty)
+                .HasMaxLength(100);
+
+            builder.Property(d => d.LicenseNumber)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            builder.HasIndex(d => d.LicenseNumber)
+                .IsUnique();
+
+            builder.Property(d => d.CreatedAt)
+                .HasDefaultValueSql("GETDATE()");
+
+            // Identity link: 1-to-1 with ApplicationUser
+            builder.Property(d => d.UserId)
+                .IsRequired();
+
+            builder.HasIndex(d => d.UserId)
+                .IsUnique();
+
+            builder.HasOne(d => d.User)
+                .WithOne(u => u.Doctor)
+                .HasForeignKey<Doctor>(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
+    }
+}
