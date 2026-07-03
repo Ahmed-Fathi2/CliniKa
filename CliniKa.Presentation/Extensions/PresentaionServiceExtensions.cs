@@ -1,5 +1,4 @@
 using Microsoft.OpenApi;
-using Microsoft.OpenApi.Models;
 
 namespace CliniKa.Presentation.Extensions
 {
@@ -11,31 +10,25 @@ namespace CliniKa.Presentation.Extensions
 
             services.AddSwaggerGen(options =>
             {
-                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                const string schemeId = "Bearer";
+
+                options.AddSecurityDefinition(schemeId, new OpenApiSecurityScheme
                 {
                     Name = "Authorization",
                     Type = SecuritySchemeType.Http,
-                    Scheme = "Bearer",
+                    Scheme = "bearer", // lowercase per RFC 7235
                     BearerFormat = "JWT",
                     In = ParameterLocation.Header,
                     Description = "Enter your JWT token. Example: eyJhbGci..."
                 });
 
-                options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                // Note: AddSecurityRequirement now takes a delegate, not a static object
+                options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
                 {
-                    {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id   = "Bearer"
-                            }
-                        },
-                        Array.Empty<string>()
-                    }
+                    { new OpenApiSecuritySchemeReference(schemeId, document), new List<string>() }
                 });
             });
+
             return services;
         }
     }
