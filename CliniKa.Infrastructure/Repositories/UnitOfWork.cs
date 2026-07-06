@@ -9,9 +9,12 @@ namespace CliniKa.Infrastructure.Repositories
         private readonly AppDbContext _context;
         private IDbContextTransaction? _transaction;
 
-        public UnitOfWork(AppDbContext context)
+        public IClinicalSessionRepository ClinicalSessions { get; }
+
+        public UnitOfWork(AppDbContext context, IClinicalSessionRepository clinicalSessions)
         {
             _context = context;
+            ClinicalSessions = clinicalSessions;
         }
 
         public async Task<int> SaveChangesAsync()
