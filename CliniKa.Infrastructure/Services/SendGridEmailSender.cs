@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Options;
 using SendGrid;
 using SendGrid.Helpers.Mail;
-using CliniKa.Application.Abstraction;
 using CliniKa.Infrastructure.Options;
+using CliniKa.Application.Abstractions.Services;
 
 namespace CliniKa.Infrastructure.Services
 {

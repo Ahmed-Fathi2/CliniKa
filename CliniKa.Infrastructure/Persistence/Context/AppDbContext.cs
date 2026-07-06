@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using CliniKa.Domain.Entities;
 using CliniKa.Infrastructure.Persistence.Seeders;
+using CliniKa.Infrastructure.Persistence.Identity;
 
 namespace CliniKa.Infrastructure.Persistence.Context
 {

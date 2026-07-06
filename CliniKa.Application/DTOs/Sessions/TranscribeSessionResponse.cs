@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace CliniKa.Application.DTOs
+namespace CliniKa.Application.DTOs.Sessions
 {
     public class TranscribeSessionResponse
     {

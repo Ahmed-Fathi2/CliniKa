@@ -3,8 +3,8 @@ using Mapster;
 using MapsterMapper;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
-using CliniKa.Application.DTOs;
 using CliniKa.Application.Validators;
+using CliniKa.Application.DTOs.Authentication;
 
 namespace CliniKa.Application.Extensions
 {

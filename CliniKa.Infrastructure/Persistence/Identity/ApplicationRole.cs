@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace CliniKa.Domain.Entities
+namespace CliniKa.Infrastructure.Persistence.Identity
 {
     public class ApplicationRole : IdentityRole
     {

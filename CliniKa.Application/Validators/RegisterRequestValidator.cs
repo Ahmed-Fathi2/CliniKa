@@ -1,3 +1,4 @@
+using CliniKa.Application.DTOs.Authentication;
 using FluentValidation;
 
 namespace CliniKa.Application

@@ -1,6 +1,6 @@
-using CliniKa.Application.DTOs;
+using CliniKa.Application.DTOs.FormFile;
 
-namespace CliniKa.Application.Abstraction
+namespace CliniKa.Application.Abstractions.Services
 {
     public interface IFileService
     {

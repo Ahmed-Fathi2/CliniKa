@@ -1,6 +1,7 @@
+using CliniKa.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 
-namespace CliniKa.Domain.Entities
+namespace CliniKa.Infrastructure.Persistence.Identity
 {
     public class ApplicationUser : IdentityUser
     {

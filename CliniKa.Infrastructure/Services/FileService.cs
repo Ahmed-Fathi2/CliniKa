@@ -1,6 +1,6 @@
 using CliniKa.Application;
-using CliniKa.Application.Abstraction;
-using CliniKa.Application.DTOs;
+using CliniKa.Application.Abstractions.Services;
+using CliniKa.Application.DTOs.FormFile;
 
 namespace CliniKa.Infrastructure.Services
 {

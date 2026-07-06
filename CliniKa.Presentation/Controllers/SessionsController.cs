@@ -2,8 +2,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using CliniKa.Application;
-using CliniKa.Application.Abstraction;
 using CliniKa.Application.DTOs;
+using CliniKa.Application.Abstractions.Services;
 
 namespace CliniKa.Presentation.Controllers
 {

@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using CliniKa.Application.Abstraction;
-using CliniKa.Application.DTOs;
 using CliniKa.Domain.Repositories;
+using CliniKa.Application.Abstractions.Services;
+using CliniKa.Application.DTOs.FormFile;
 
 namespace CliniKa.Presentation.Controllers
 {

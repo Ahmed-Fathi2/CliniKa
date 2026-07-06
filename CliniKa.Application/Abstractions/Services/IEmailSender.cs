@@ -1,4 +1,4 @@
-namespace CliniKa.Application.Abstraction
+namespace CliniKa.Application.Abstractions.Services
 {
     public interface IEmailSender
     {
