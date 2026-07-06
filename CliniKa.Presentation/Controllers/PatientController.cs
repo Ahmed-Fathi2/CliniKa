@@ -16,7 +16,7 @@ namespace CliniKa.Presentation.Controllers
             _patientService = patientService;
         }
 
-        [HttpGet("/search")]
+        [HttpGet("search")]
         public async Task<IActionResult> SearchPatients([FromQuery] string query)
         {
             var result = await _patientService.GetPatientAsync(query);
@@ -24,7 +24,25 @@ namespace CliniKa.Presentation.Controllers
             {
                 return Ok(result);
             }
-            return BadRequest(GeneralResult.Failure());
+            else if (result.Status == ResultStatus.NotFound)
+            {
+                return NotFound(result);
+            }
+            return BadRequest(result);
+        }
+        [HttpGet("{id:int}/history")]
+        public async Task<IActionResult> GetPatientHistory([FromRoute] int id)
+        {
+            var result = await _patientService.GetPatientHistoryAsync(id);
+            if (result.IsSuccess)
+            {
+                return Ok(result);
+            }
+            else if (result.Status == ResultStatus.NotFound)
+            {
+                return NotFound(result);
+            }
+            return BadRequest(result);
         }
     }
 }

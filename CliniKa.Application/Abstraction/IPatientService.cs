@@ -7,6 +7,7 @@ namespace CliniKa.Application.Abstraction
 {
     public interface IPatientService
     {
-        Task<GeneralResult<PatientReadDTO>> GetPatientAsync(string query);
+        Task<GeneralResult<PatientReadDto>> GetPatientAsync(string query);
+        Task<GeneralResult<PatientHistoryReadDto>> GetPatientHistoryAsync(int patientId);
     }
 }

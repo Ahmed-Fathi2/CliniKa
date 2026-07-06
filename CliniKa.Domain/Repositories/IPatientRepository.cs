@@ -7,5 +7,6 @@ namespace CliniKa.Domain.Repositories
 {
     public interface IPatientRepository : IGenericRepository<Patient, int>
     {
+        Task<Patient?> GetPatientWithIncludesAsync(int patientId);
     }
 }

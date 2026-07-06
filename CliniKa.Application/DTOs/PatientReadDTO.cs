@@ -4,7 +4,7 @@ using System.Text;
 
 namespace CliniKa.Application.DTOs
 {
-    public class PatientReadDTO
+    public class PatientReadDto
     {
         public int Id { get; set; }
         public string FullName { get; set; } = string.Empty;
