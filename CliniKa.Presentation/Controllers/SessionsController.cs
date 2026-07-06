@@ -19,7 +19,8 @@ namespace CliniKa.Presentation.Controllers
         }
 
         [HttpPost("{id:int}/transcribe")]
-        public async Task<IActionResult> Transcribe([FromRoute] int id, [FromForm] IFormFile audio)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> Transcribe([FromRoute] int id, IFormFile audio)
         {
             if (audio == null || audio.Length == 0)
             {
