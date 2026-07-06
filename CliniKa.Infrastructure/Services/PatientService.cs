@@ -24,7 +24,7 @@ namespace CliniKa.Infrastructure.Services
 
             if (patient == null)
             {
-                GeneralResult<PatientReadDto>.NotFound("Patient not found.");
+                return GeneralResult<PatientReadDto>.NotFound("Patient not found.");
             }
 
             var patientReadDTO = new PatientReadDto
