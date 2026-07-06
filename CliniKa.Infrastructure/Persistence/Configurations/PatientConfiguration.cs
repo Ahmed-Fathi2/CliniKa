@@ -1,6 +1,7 @@
+using CliniKa.Domain.Entities;
+using CliniKa.Infrastructure.Persistence.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using CliniKa.Domain.Entities;
 
 namespace CliniKa.Infrastructure.Persistence.Configurations
 {
@@ -49,8 +50,8 @@ namespace CliniKa.Infrastructure.Persistence.Configurations
             builder.HasIndex(p => p.UserId)
                 .IsUnique();
 
-            builder.HasOne(p => p.User)
-                .WithOne(u => u.Patient)
+            builder.HasOne<ApplicationUser>()
+                .WithOne()
                 .HasForeignKey<Patient>(p => p.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         }

@@ -5,12 +5,12 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using CliniKa.Application;
-using CliniKa.Domain.Entities;
 using CliniKa.Application.Constants;
 using System.Text;
 using CliniKa.Application.Abstractions.Authentication;
 using CliniKa.Application.Abstractions.Services;
 using CliniKa.Application.DTOs.Authentication;
+using CliniKa.Infrastructure.Persistence.Identity;
 
 namespace CliniKa.Infrastructure.Services
 {
