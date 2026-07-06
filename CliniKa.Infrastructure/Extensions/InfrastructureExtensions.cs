@@ -65,10 +65,22 @@ namespace CliniKa.Infrastructure.Extensions
             services.Configure<SendGridOptions>(configuration.GetSection(SendGridOptions.SectionName));
             services.AddTransient<IEmailSender, SendGridEmailSender>();
 
+            // Configure LangFlow Options & HttpClient Service
+            services.AddOptions<LangFlowOptions>()
+                .Bind(configuration.GetSection(LangFlowOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            services.AddHttpClient<ILangFlowService, LangFlowService>();
+
+            // Register repositories
+            services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
+
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IJwtProvider, JwtProvider>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IFileService, FileService>();
+            services.AddScoped<ISessionService, SessionService>();
 
             services.AddHttpContextAccessor();
 
