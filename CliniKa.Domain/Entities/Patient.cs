@@ -16,7 +16,6 @@ namespace CliniKa.Domain.Entities
 
         // Identity link
         public string UserId { get; set; } = string.Empty;
-        public virtual ApplicationUser User { get; set; } = null!;
 
         // Navigation properties
         public virtual ICollection<ClinicalSession> ClinicalSessions { get; set; } = new List<ClinicalSession>();

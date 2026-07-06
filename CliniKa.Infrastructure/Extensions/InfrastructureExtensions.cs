@@ -14,6 +14,7 @@ using CliniKa.Infrastructure.Services;
 using System.Text;
 using CliniKa.Application.Abstractions.Authentication;
 using CliniKa.Application.Abstractions.Services;
+using CliniKa.Infrastructure.Persistence.Identity;
 
 namespace CliniKa.Infrastructure.Extensions
 {
