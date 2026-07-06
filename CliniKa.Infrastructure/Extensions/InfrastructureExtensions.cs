@@ -75,6 +75,7 @@ namespace CliniKa.Infrastructure.Extensions
 
             // Register repositories
             services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
+            services.AddScoped<IClinicalSessionRepository, ClinicalSessionRepository>();
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IJwtProvider, JwtProvider>();
