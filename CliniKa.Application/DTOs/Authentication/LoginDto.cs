@@ -1,4 +1,4 @@
-namespace CliniKa.Application.DTOs
+namespace CliniKa.Application.DTOs.Authentication
 {
     public record LoginRequest(string Email, string Password);
     public record LoginResponse(

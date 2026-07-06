@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 using Moq;
 using Xunit;
 using CliniKa.Application;
-using CliniKa.Application.Abstraction;
-using CliniKa.Application.DTOs;
 using CliniKa.Domain.Entities;
 using CliniKa.Domain.Repositories;
 using CliniKa.Infrastructure.Services;
+using CliniKa.Application.Abstractions.Services;
+using CliniKa.Application.DTOs.Langflow;
 
 namespace CliniKa.Tests
 {

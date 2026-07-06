@@ -3,8 +3,8 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using CliniKa.Application;
-using CliniKa.Application.Abstraction;
-using CliniKa.Application.DTOs;
+using CliniKa.Application.Abstractions.Services;
+using CliniKa.Application.DTOs.Sessions;
 using CliniKa.Domain.Entities;
 using CliniKa.Domain.Repositories;
 

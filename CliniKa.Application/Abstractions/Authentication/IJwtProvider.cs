@@ -1,4 +1,4 @@
-namespace CliniKa.Application.Abstraction
+namespace CliniKa.Application.Abstractions.Authentication
 {
     public interface IJwtProvider
     {

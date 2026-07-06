@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace CliniKa.Application.DTOs
+namespace CliniKa.Application.DTOs.Langflow
 {
     public class LangFlowResponse
     {

@@ -6,9 +6,9 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using CliniKa.Application;
-using CliniKa.Application.Abstraction;
-using CliniKa.Application.DTOs;
 using CliniKa.Infrastructure.Options;
+using CliniKa.Application.Abstractions.Services;
+using CliniKa.Application.DTOs.Langflow;
 
 namespace CliniKa.Infrastructure.Services
 {

@@ -1,8 +1,8 @@
 using System.IO;
 using System.Threading.Tasks;
-using CliniKa.Application.DTOs;
+using CliniKa.Application.DTOs.Sessions;
 
-namespace CliniKa.Application.Abstraction
+namespace CliniKa.Application.Abstractions.Services
 {
     public interface ISessionService
     {

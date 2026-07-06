@@ -6,13 +6,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using CliniKa.Domain.Entities;
 using CliniKa.Domain.Repositories;
-using CliniKa.Application.Abstraction;
 using CliniKa.Infrastructure.Authentication;
 using CliniKa.Infrastructure.Options;
 using CliniKa.Infrastructure.Persistence.Context;
 using CliniKa.Infrastructure.Repositories;
 using CliniKa.Infrastructure.Services;
 using System.Text;
+using CliniKa.Application.Abstractions.Authentication;
+using CliniKa.Application.Abstractions.Services;
 
 namespace CliniKa.Infrastructure.Extensions
 {
