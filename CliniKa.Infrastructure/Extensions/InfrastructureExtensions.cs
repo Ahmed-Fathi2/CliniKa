@@ -15,6 +15,7 @@ using System.Text;
 using CliniKa.Application.Abstractions.Authentication;
 using CliniKa.Application.Abstractions.Services;
 using CliniKa.Infrastructure.Persistence.Identity;
+using CliniKa.Application.Abstraction;
 
 namespace CliniKa.Infrastructure.Extensions
 {
@@ -78,12 +79,14 @@ namespace CliniKa.Infrastructure.Extensions
             // Register repositories
             services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
             services.AddScoped<IClinicalSessionRepository, ClinicalSessionRepository>();
+            services.AddScoped<IPatientRepository, PatientRepository>();
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IJwtProvider, JwtProvider>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IFileService, FileService>();
             services.AddScoped<ISessionService, SessionService>();
+            services.AddScoped<IPatientService, PatientService>();
 
             services.AddHttpContextAccessor();
 
