@@ -41,7 +41,7 @@ namespace CliniKa.Application
             return new() { IsSuccess = true, Status = ResultStatus.Success, Message = message, Data = data };
         }
 
-        public static GeneralResult<T> Success(string message = "Operation completed successfully.")
+        public new static GeneralResult<T> Success(string message = "Operation completed successfully.")
             => new() { IsSuccess = true, Status = ResultStatus.Success, Message = message };
 
         public new static GeneralResult<T> Failure(string message = "Operation failed.")

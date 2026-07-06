@@ -1,5 +1,5 @@
 using FluentValidation;
-using CliniKa.Application.DTOs;
+using CliniKa.Application.DTOs.Authentication;
 
 namespace CliniKa.Application.Validators
 {

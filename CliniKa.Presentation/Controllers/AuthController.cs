@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using CliniKa.Application;
-using CliniKa.Application.DTOs;
 using CliniKa.Application.Abstractions.Authentication;
+using CliniKa.Application.DTOs.Authentication;
 
 namespace CliniKa.Presentation.Controllers
 {

@@ -1,7 +1,7 @@
-using CliniKa.Application.DTOs;
+using CliniKa.Application.DTOs.Authentication;
 using System.Threading.Tasks;
 
-namespace CliniKa.Application.Abstraction
+namespace CliniKa.Application.Abstractions.Authentication
 {
     public interface IAuthService
     {

@@ -5,6 +5,8 @@ namespace CliniKa.Domain.Repositories
 {
     public interface IUnitOfWork : IAsyncDisposable
     {
+        IClinicalSessionRepository ClinicalSessions { get; }
+
         Task<int> SaveChangesAsync();
 
         // Transaction methods

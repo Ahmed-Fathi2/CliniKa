@@ -7,10 +7,10 @@ using Microsoft.Extensions.Logging;
 using CliniKa.Application;
 using CliniKa.Domain.Entities;
 using CliniKa.Application.Constants;
-using CliniKa.Application.DTOs;
 using System.Text;
 using CliniKa.Application.Abstractions.Authentication;
 using CliniKa.Application.Abstractions.Services;
+using CliniKa.Application.DTOs.Authentication;
 
 namespace CliniKa.Infrastructure.Services
 {

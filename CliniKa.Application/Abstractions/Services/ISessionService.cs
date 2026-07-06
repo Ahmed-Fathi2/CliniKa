@@ -1,10 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System.IO;
+using System.Threading.Tasks;
+using CliniKa.Application.DTOs.Sessions;
 
-namespace CliniKa.Application.Abstraction
+namespace CliniKa.Application.Abstractions.Services
 {
-    internal interface ISessionService
+    public interface ISessionService
     {
+        Task<GeneralResult<TranscribeSessionResponse>> TranscribeSessionAudioAsync(int sessionId, Stream audioStream, string fileName);
     }
 }
