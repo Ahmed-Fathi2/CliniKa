@@ -17,19 +17,21 @@ namespace CliniKa.Tests
 {
     public class SessionServiceTests
     {
-        private readonly Mock<IGenericRepository<ClinicalSession, int>> _mockSessionRepo;
+        private readonly Mock<IClinicalSessionRepository> _mockSessionRepo;
         private readonly Mock<ILangFlowService> _mockLangFlowService;
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly SessionService _sessionService;
 
         public SessionServiceTests()
         {
-            _mockSessionRepo = new Mock<IGenericRepository<ClinicalSession, int>>();
+            _mockSessionRepo = new Mock<IClinicalSessionRepository>();
             _mockLangFlowService = new Mock<ILangFlowService>();
             _mockUnitOfWork = new Mock<IUnitOfWork>();
 
+            // Configure Unit of Work mock to return the mock repository
+            _mockUnitOfWork.Setup(u => u.ClinicalSessions).Returns(_mockSessionRepo.Object);
+
             _sessionService = new SessionService(
-                _mockSessionRepo.Object,
                 _mockLangFlowService.Object,
                 _mockUnitOfWork.Object
             );

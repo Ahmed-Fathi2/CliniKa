@@ -12,16 +12,13 @@ namespace CliniKa.Infrastructure.Services
 {
     public class SessionService : ISessionService
     {
-        private readonly IGenericRepository<ClinicalSession, int> _sessionRepository;
         private readonly ILangFlowService _langFlowService;
         private readonly IUnitOfWork _unitOfWork;
 
         public SessionService(
-            IGenericRepository<ClinicalSession, int> sessionRepository,
             ILangFlowService langFlowService,
             IUnitOfWork unitOfWork)
         {
-            _sessionRepository = sessionRepository;
             _langFlowService = langFlowService;
             _unitOfWork = unitOfWork;
         }
@@ -31,7 +28,7 @@ namespace CliniKa.Infrastructure.Services
             try
             {
                 // Retrieve clinical session (track changes = true)
-                var session = await _sessionRepository.GetAsync(s => s.Id == sessionId, trackChanges: true);
+                var session = await _unitOfWork.ClinicalSessions.GetAsync(s => s.Id == sessionId, trackChanges: true);
                 if (session == null)
                 {
                     return GeneralResult<TranscribeSessionResponse>.NotFound("Clinical Session not found.");
