@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CliniKa.Infrastructure", "C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CliniKa.Presentation", "CliniKa.Presentation\CliniKa.Presentation.csproj", "{40C4603F-AA1A-44A6-B039-527BA80E9897}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CliniKa.Tests", "CliniKa.Tests\CliniKa.Tests.csproj", "{2C8B828E-ABAC-4A5C-B070-02162C43AC0B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,18 @@ Global
 		{40C4603F-AA1A-44A6-B039-527BA80E9897}.Release|x64.Build.0 = Release|Any CPU
 		{40C4603F-AA1A-44A6-B039-527BA80E9897}.Release|x86.ActiveCfg = Release|Any CPU
 		{40C4603F-AA1A-44A6-B039-527BA80E9897}.Release|x86.Build.0 = Release|Any CPU
+		{2C8B828E-ABAC-4A5C-B070-02162C43AC0B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C8B828E-ABAC-4A5C-B070-02162C43AC0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2C8B828E-ABAC-4A5C-B070-02162C43AC0B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2C8B828E-ABAC-4A5C-B070-02162C43AC0B}.Debug|x64.Build.0 = Debug|Any CPU
+		{2C8B828E-ABAC-4A5C-B070-02162C43AC0B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2C8B828E-ABAC-4A5C-B070-02162C43AC0B}.Debug|x86.Build.0 = Debug|Any CPU
+		{2C8B828E-ABAC-4A5C-B070-02162C43AC0B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2C8B828E-ABAC-4A5C-B070-02162C43AC0B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2C8B828E-ABAC-4A5C-B070-02162C43AC0B}.Release|x64.ActiveCfg = Release|Any CPU
+		{2C8B828E-ABAC-4A5C-B070-02162C43AC0B}.Release|x64.Build.0 = Release|Any CPU
+		{2C8B828E-ABAC-4A5C-B070-02162C43AC0B}.Release|x86.ActiveCfg = Release|Any CPU
+		{2C8B828E-ABAC-4A5C-B070-02162C43AC0B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
