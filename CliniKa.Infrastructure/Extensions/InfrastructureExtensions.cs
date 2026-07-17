@@ -68,8 +68,8 @@ namespace CliniKa.Infrastructure.Extensions
             services.Configure<SendGridOptions>(configuration.GetSection(SendGridOptions.SectionName));
             services.AddTransient<IEmailSender, SendGridEmailSender>();
 
-            // Configure Activepieces HttpClient Service
-            services.AddHttpClient<ILangFlowService, LangFlowService>();
+            // Configure Activepieces LangFlow Service (uses Node.js helper for SSL compatibility)
+            services.AddScoped<ILangFlowService, LangFlowService>();
 
             // Register repositories
             services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
