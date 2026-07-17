@@ -7,6 +7,7 @@ namespace CliniKa.Domain.Repositories
     {
         IClinicalSessionRepository ClinicalSessions { get; }
         IPatientRepository Patient { get; }
+        IDoctorRepository Doctors { get; }
 
         Task<int> SaveChangesAsync();
 

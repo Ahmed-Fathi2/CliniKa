@@ -7,6 +7,8 @@ namespace CliniKa.Presentation.Extensions
         public static IServiceCollection AddPresentation(this IServiceCollection services)
         {
             services.AddEndpointsApiExplorer();
+            services.AddExceptionHandler<Middlewares.GlobalExceptionHandler>();
+            services.AddProblemDetails();
 
             services.AddSwaggerGen(options =>
             {

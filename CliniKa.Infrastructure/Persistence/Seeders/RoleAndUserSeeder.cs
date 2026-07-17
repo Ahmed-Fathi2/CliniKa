@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using CliniKa.Domain.Entities;
 using CliniKa.Infrastructure.Persistence.Identity;
+using System;
 
 namespace CliniKa.Infrastructure.Persistence.Seeders
 {
@@ -12,9 +13,12 @@ namespace CliniKa.Infrastructure.Persistence.Seeders
             const string adminRoleId = "8e445865-a24d-4543-a6c6-9443d048cdb9";
             const string doctorRoleId = "2c5e174e-3b0e-446f-86af-483d56fd7210";
             const string patientRoleId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
-            const string adminUserId = "b74ddd14-6340-4840-95c2-db12554843e5";
-            // Pass = Admin123!
 
+            const string adminUserId = "b74ddd14-6340-4840-95c2-db12554843e5";
+            const string doctorUserId = "d1b2c3d4-e5f6-7890-abcd-ef1234567890";
+            const string patientUserId = "p1b2c3d4-e5f6-7890-abcd-ef1234567890";
+
+            // Roles
             builder.Entity<ApplicationRole>().HasData(
                 new ApplicationRole
                 {
@@ -42,7 +46,7 @@ namespace CliniKa.Infrastructure.Persistence.Seeders
                 }
             );
 
-            // Seed Admin User
+            // Admin
             var adminUser = new ApplicationUser
             {
                 Id = adminUserId,
@@ -55,15 +59,82 @@ namespace CliniKa.Infrastructure.Persistence.Seeders
                 LastName = "CliniKa",
                 SecurityStamp = "d87a4b0d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
                 ConcurrencyStamp = "8e445865-a24d-4543-a6c6-9443d048cdb9",
-                PasswordHash = "AQAAAAIAAYagAAAAEJ0z5M8i3f4+v6K/V+v6+v6+v6+v6+v6+v6+v6+v6+v6+v6+v6+v6+v6+v6+v6+v6w=="
+                PasswordHash = "AQAAAAIAAYagAAAAENG89Ckz0JyxHoDFcsHCfu2gHIZenH3nbu7HvWo4TADxbT94S7/KjFXJmmwqZU+vfQ=="
             };
 
-            builder.Entity<ApplicationUser>().HasData(adminUser);
-
-            builder.Entity<IdentityUserRole<string>>().HasData(new IdentityUserRole<string>
+            // Doctor User
+            var doctorUser = new ApplicationUser
             {
-                RoleId = adminRoleId,
-                UserId = adminUserId
+                Id = doctorUserId,
+                UserName = "doctor@clinika.com",
+                NormalizedUserName = "DOCTOR@CLINIKA.COM",
+                Email = "doctor@clinika.com",
+                NormalizedEmail = "DOCTOR@CLINIKA.COM",
+                EmailConfirmed = true,
+                FirstName = "Ahmad",
+                LastName = "Fathi",
+                SecurityStamp = "7c6a9b4d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
+                ConcurrencyStamp = "8c6a9b4d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
+                PasswordHash = "AQAAAAIAAYagAAAAENG89Ckz0JyxHoDFcsHCfu2gHIZenH3nbu7HvWo4TADxbT94S7/KjFXJmmwqZU+vfQ=="
+            };
+
+            // Patient User
+            var patientUser = new ApplicationUser
+            {
+                Id = patientUserId,
+                UserName = "patient@clinika.com",
+                NormalizedUserName = "PATIENT@CLINIKA.COM",
+                Email = "patient@clinika.com",
+                NormalizedEmail = "PATIENT@CLINIKA.COM",
+                EmailConfirmed = true,
+                FirstName = "John",
+                LastName = "Doe",
+                SecurityStamp = "5c6a9b4d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
+                ConcurrencyStamp = "6c6a9b4d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
+                PasswordHash = "AQAAAAIAAYagAAAAENG89Ckz0JyxHoDFcsHCfu2gHIZenH3nbu7HvWo4TADxbT94S7/KjFXJmmwqZU+vfQ=="
+            };
+
+            builder.Entity<ApplicationUser>().HasData(adminUser, doctorUser, patientUser);
+
+            // User-Roles
+            builder.Entity<IdentityUserRole<string>>().HasData(
+                new IdentityUserRole<string>
+                {
+                    RoleId = adminRoleId,
+                    UserId = adminUserId
+                },
+                new IdentityUserRole<string>
+                {
+                    RoleId = doctorRoleId,
+                    UserId = doctorUserId
+                },
+                new IdentityUserRole<string>
+                {
+                    RoleId = patientRoleId,
+                    UserId = patientUserId
+                }
+            );
+
+            // Seed Doctor Entity
+            builder.Entity<Doctor>().HasData(new Doctor
+            {
+                Id = 1,
+                FullName = "Dr. Ahmad Fathi",
+                Specialty = "Cardiology",
+                LicenseNumber = "DOC12345",
+                UserId = doctorUserId,
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            });
+
+            // Seed Patient Entity
+            builder.Entity<Patient>().HasData(new Patient
+            {
+                Id = 1,
+                FullName = "John Doe",
+                DateOfBirth = new DateTime(1990, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                Gender = "Male",
+                UserId = patientUserId,
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
             });
         }
     }

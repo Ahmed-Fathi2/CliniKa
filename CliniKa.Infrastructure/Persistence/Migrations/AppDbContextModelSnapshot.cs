@@ -17,7 +17,7 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.15")
+                .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -91,155 +91,6 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Allergies", (string)null);
-                });
-
-            modelBuilder.Entity("CliniKa.Domain.Entities.ApplicationRole", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("NormalizedName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("RoleDescription")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedName")
-                        .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
-
-                    b.ToTable("AspNetRoles", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "8e445865-a24d-4543-a6c6-9443d048cdb9",
-                            ConcurrencyStamp = "1",
-                            Name = "Admin",
-                            NormalizedName = "ADMIN",
-                            RoleDescription = "System Administrator"
-                        },
-                        new
-                        {
-                            Id = "2c5e174e-3b0e-446f-86af-483d56fd7210",
-                            ConcurrencyStamp = "2",
-                            Name = "Doctor",
-                            NormalizedName = "DOCTOR",
-                            RoleDescription = "Medical Doctor"
-                        },
-                        new
-                        {
-                            Id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-                            ConcurrencyStamp = "3",
-                            Name = "Patient",
-                            NormalizedName = "PATIENT",
-                            RoleDescription = "Patient User"
-                        });
-                });
-
-            modelBuilder.Entity("CliniKa.Domain.Entities.ApplicationUser", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("AccessFailedCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("NormalizedEmail")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("NormalizedUserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("SecurityStamp")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("UserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedEmail")
-                        .HasDatabaseName("EmailIndex");
-
-                    b.HasIndex("NormalizedUserName")
-                        .IsUnique()
-                        .HasDatabaseName("UserNameIndex")
-                        .HasFilter("[NormalizedUserName] IS NOT NULL");
-
-                    b.ToTable("AspNetUsers", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "b74ddd14-6340-4840-95c2-db12554843e5",
-                            AccessFailedCount = 0,
-                            ConcurrencyStamp = "8e445865-a24d-4543-a6c6-9443d048cdb9",
-                            Email = "admin@clinika.com",
-                            EmailConfirmed = true,
-                            FirstName = "Admin",
-                            LastName = "CliniKa",
-                            LockoutEnabled = false,
-                            NormalizedEmail = "ADMIN@CLINIKA.COM",
-                            NormalizedUserName = "ADMIN@CLINIKA.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEJ0z5M8i3f4+v6K/V+v6+v6+v6+v6+v6+v6+v6+v6+v6+v6+v6+v6+v6+v6+v6+v6w==",
-                            PhoneNumberConfirmed = false,
-                            SecurityStamp = "d87a4b0d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
-                            TwoFactorEnabled = false,
-                            UserName = "admin@clinika.com"
-                        });
                 });
 
             modelBuilder.Entity("CliniKa.Domain.Entities.ClinicalSession", b =>
@@ -373,6 +224,17 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Doctors", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FullName = "Dr. Ahmad Fathi",
+                            LicenseNumber = "DOC12345",
+                            Specialty = "Cardiology",
+                            UserId = "d1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        });
                 });
 
             modelBuilder.Entity("CliniKa.Domain.Entities.Patient", b =>
@@ -430,6 +292,17 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Patients", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            DateOfBirth = new DateTime(1990, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FullName = "John Doe",
+                            Gender = "Male",
+                            UserId = "p1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        });
                 });
 
             modelBuilder.Entity("CliniKa.Domain.Entities.PatientAllergy", b =>
@@ -649,6 +522,201 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                     b.ToTable("UploadedDocuments", (string)null);
                 });
 
+            modelBuilder.Entity("CliniKa.Infrastructure.Persistence.Identity.ApplicationRole", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("NormalizedName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("RoleDescription")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("RoleNameIndex")
+                        .HasFilter("[NormalizedName] IS NOT NULL");
+
+                    b.ToTable("AspNetRoles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "8e445865-a24d-4543-a6c6-9443d048cdb9",
+                            ConcurrencyStamp = "1",
+                            Name = "Admin",
+                            NormalizedName = "ADMIN",
+                            RoleDescription = "System Administrator"
+                        },
+                        new
+                        {
+                            Id = "2c5e174e-3b0e-446f-86af-483d56fd7210",
+                            ConcurrencyStamp = "2",
+                            Name = "Doctor",
+                            NormalizedName = "DOCTOR",
+                            RoleDescription = "Medical Doctor"
+                        },
+                        new
+                        {
+                            Id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                            ConcurrencyStamp = "3",
+                            Name = "Patient",
+                            NormalizedName = "PATIENT",
+                            RoleDescription = "Patient User"
+                        });
+                });
+
+            modelBuilder.Entity("CliniKa.Infrastructure.Persistence.Identity.ApplicationUser", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("AccessFailedCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("DoctorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("LockoutEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LockoutEnd")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("NormalizedEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("NormalizedUserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("PatientId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("PhoneNumberConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("SecurityStamp")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("UserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DoctorId");
+
+                    b.HasIndex("NormalizedEmail")
+                        .HasDatabaseName("EmailIndex");
+
+                    b.HasIndex("NormalizedUserName")
+                        .IsUnique()
+                        .HasDatabaseName("UserNameIndex")
+                        .HasFilter("[NormalizedUserName] IS NOT NULL");
+
+                    b.HasIndex("PatientId");
+
+                    b.ToTable("AspNetUsers", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "b74ddd14-6340-4840-95c2-db12554843e5",
+                            AccessFailedCount = 0,
+                            ConcurrencyStamp = "8e445865-a24d-4543-a6c6-9443d048cdb9",
+                            Email = "admin@clinika.com",
+                            EmailConfirmed = true,
+                            FirstName = "Admin",
+                            LastName = "CliniKa",
+                            LockoutEnabled = false,
+                            NormalizedEmail = "ADMIN@CLINIKA.COM",
+                            NormalizedUserName = "ADMIN@CLINIKA.COM",
+                            PasswordHash = "AQAAAAIAAYagAAAAENG89Ckz0JyxHoDFcsHCfu2gHIZenH3nbu7HvWo4TADxbT94S7/KjFXJmmwqZU+vfQ==",
+                            PhoneNumberConfirmed = false,
+                            SecurityStamp = "d87a4b0d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
+                            TwoFactorEnabled = false,
+                            UserName = "admin@clinika.com"
+                        },
+                        new
+                        {
+                            Id = "d1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                            AccessFailedCount = 0,
+                            ConcurrencyStamp = "8c6a9b4d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
+                            Email = "doctor@clinika.com",
+                            EmailConfirmed = true,
+                            FirstName = "Ahmad",
+                            LastName = "Fathi",
+                            LockoutEnabled = false,
+                            NormalizedEmail = "DOCTOR@CLINIKA.COM",
+                            NormalizedUserName = "DOCTOR@CLINIKA.COM",
+                            PasswordHash = "AQAAAAIAAYagAAAAENG89Ckz0JyxHoDFcsHCfu2gHIZenH3nbu7HvWo4TADxbT94S7/KjFXJmmwqZU+vfQ==",
+                            PhoneNumberConfirmed = false,
+                            SecurityStamp = "7c6a9b4d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
+                            TwoFactorEnabled = false,
+                            UserName = "doctor@clinika.com"
+                        },
+                        new
+                        {
+                            Id = "p1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                            AccessFailedCount = 0,
+                            ConcurrencyStamp = "6c6a9b4d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
+                            Email = "patient@clinika.com",
+                            EmailConfirmed = true,
+                            FirstName = "John",
+                            LastName = "Doe",
+                            LockoutEnabled = false,
+                            NormalizedEmail = "PATIENT@CLINIKA.COM",
+                            NormalizedUserName = "PATIENT@CLINIKA.COM",
+                            PasswordHash = "AQAAAAIAAYagAAAAENG89Ckz0JyxHoDFcsHCfu2gHIZenH3nbu7HvWo4TADxbT94S7/KjFXJmmwqZU+vfQ==",
+                            PhoneNumberConfirmed = false,
+                            SecurityStamp = "5c6a9b4d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
+                            TwoFactorEnabled = false,
+                            UserName = "patient@clinika.com"
+                        });
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.Property<int>("Id")
@@ -740,6 +808,16 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                         {
                             UserId = "b74ddd14-6340-4840-95c2-db12554843e5",
                             RoleId = "8e445865-a24d-4543-a6c6-9443d048cdb9"
+                        },
+                        new
+                        {
+                            UserId = "d1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                            RoleId = "2c5e174e-3b0e-446f-86af-483d56fd7210"
+                        },
+                        new
+                        {
+                            UserId = "p1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                            RoleId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
                         });
                 });
 
@@ -801,24 +879,20 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("CliniKa.Domain.Entities.Doctor", b =>
                 {
-                    b.HasOne("CliniKa.Domain.Entities.ApplicationUser", "User")
-                        .WithOne("Doctor")
+                    b.HasOne("CliniKa.Infrastructure.Persistence.Identity.ApplicationUser", null)
+                        .WithOne()
                         .HasForeignKey("CliniKa.Domain.Entities.Doctor", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CliniKa.Domain.Entities.Patient", b =>
                 {
-                    b.HasOne("CliniKa.Domain.Entities.ApplicationUser", "User")
-                        .WithOne("Patient")
+                    b.HasOne("CliniKa.Infrastructure.Persistence.Identity.ApplicationUser", null)
+                        .WithOne()
                         .HasForeignKey("CliniKa.Domain.Entities.Patient", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CliniKa.Domain.Entities.PatientAllergy", b =>
@@ -917,9 +991,24 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                     b.Navigation("ClinicalSession");
                 });
 
+            modelBuilder.Entity("CliniKa.Infrastructure.Persistence.Identity.ApplicationUser", b =>
+                {
+                    b.HasOne("CliniKa.Domain.Entities.Doctor", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId");
+
+                    b.HasOne("CliniKa.Domain.Entities.Patient", "Patient")
+                        .WithMany()
+                        .HasForeignKey("PatientId");
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("Patient");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
-                    b.HasOne("CliniKa.Domain.Entities.ApplicationRole", null)
+                    b.HasOne("CliniKa.Infrastructure.Persistence.Identity.ApplicationRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -928,7 +1017,7 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("CliniKa.Domain.Entities.ApplicationUser", null)
+                    b.HasOne("CliniKa.Infrastructure.Persistence.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -937,7 +1026,7 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("CliniKa.Domain.Entities.ApplicationUser", null)
+                    b.HasOne("CliniKa.Infrastructure.Persistence.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -946,13 +1035,13 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
-                    b.HasOne("CliniKa.Domain.Entities.ApplicationRole", null)
+                    b.HasOne("CliniKa.Infrastructure.Persistence.Identity.ApplicationRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("CliniKa.Domain.Entities.ApplicationUser", null)
+                    b.HasOne("CliniKa.Infrastructure.Persistence.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -961,7 +1050,7 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("CliniKa.Domain.Entities.ApplicationUser", null)
+                    b.HasOne("CliniKa.Infrastructure.Persistence.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -971,13 +1060,6 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("CliniKa.Domain.Entities.Allergy", b =>
                 {
                     b.Navigation("PatientAllergies");
-                });
-
-            modelBuilder.Entity("CliniKa.Domain.Entities.ApplicationUser", b =>
-                {
-                    b.Navigation("Doctor");
-
-                    b.Navigation("Patient");
                 });
 
             modelBuilder.Entity("CliniKa.Domain.Entities.ClinicalSession", b =>

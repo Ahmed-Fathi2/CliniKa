@@ -1,14 +1,14 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
 using Xunit;
-using CliniKa.Infrastructure.Options;
 using CliniKa.Infrastructure.Services;
 
 namespace CliniKa.Tests
@@ -16,40 +16,11 @@ namespace CliniKa.Tests
     public class LangFlowServiceTests
     {
         [Fact]
-        public async Task ProcessAudioAsync_ShouldReturnSuccess_WhenApiCallIsSuccessful()
+        public async Task TriggerDiagnosisFlowAsync_ShouldReturnSuccess_WhenApiCallIsSuccessful()
         {
             // Arrange
-            var options = new LangFlowOptions
-            {
-                BaseUrl = "https://api.langflow.store",
-                ApiKey = "test-api-key",
-                AudioFlowId = "test-flow-id",
-                VisionFlowId = "vision-id",
-                SafetyFlowId = "safety-id"
-            };
-            var mockOptions = new Mock<IOptions<LangFlowOptions>>();
-            mockOptions.Setup(o => o.Value).Returns(options);
-
-            // Mocking HttpMessageHandler
             var mockHandler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
             
-            // Raw JSON response matching LangFlow response format
-            var rawLangFlowResponse = @"{
-                ""outputs"": [
-                  {
-                    ""outputs"": [
-                      {
-                        ""results"": {
-                          ""message"": {
-                            ""text"": ""{\""AudioTranscript\"": \""كحة وسخونة\"", \""Symptoms\"": [\""Cough\"", \""Fever\""], \""MentionedMedications\"": [\""Panadol\""], \""MentionedHistory\"": []}""
-                          }
-                        }
-                      }
-                    ]
-                  }
-                ]
-            }";
-
             mockHandler
                 .Protected()
                 .Setup<Task<HttpResponseMessage>>(
@@ -60,24 +31,34 @@ namespace CliniKa.Tests
                 .ReturnsAsync(new HttpResponseMessage
                 {
                     StatusCode = HttpStatusCode.OK,
-                    Content = new StringContent(rawLangFlowResponse, Encoding.UTF8, "application/json")
+                    Content = new StringContent("success", Encoding.UTF8, "text/plain")
                 });
 
             var httpClient = new HttpClient(mockHandler.Object);
-            var service = new LangFlowService(httpClient, mockOptions.Object);
+            var service = new LangFlowService(httpClient);
 
-            var audioStream = new MemoryStream(Encoding.UTF8.GetBytes("fake audio data"));
-            var fileName = "test.wav";
+            // Create temporary files to avoid File.Exists returning false
+            var tempAudio = Path.GetTempFileName();
+            var tempDoc = Path.GetTempFileName();
+            try
+            {
+                await File.WriteAllTextAsync(tempAudio, "fake audio content");
+                await File.WriteAllTextAsync(tempDoc, "fake document content");
 
-            // Act
-            var result = await service.ProcessAudioAsync(audioStream, fileName);
+                var documents = new List<string> { tempDoc };
 
-            // Assert
-            Assert.True(result.IsSuccess);
-            Assert.NotNull(result.Data);
-            Assert.Equal("كحة وسخونة", result.Data.AudioTranscript);
-            Assert.Contains("Cough", result.Data.Symptoms);
-            Assert.Contains("Panadol", result.Data.MentionedMedications);
+                // Act
+                var result = await service.TriggerDiagnosisFlowAsync(123, tempAudio, documents);
+
+                // Assert
+                Assert.True(result.IsSuccess);
+                Assert.Equal("success", result.Data);
+            }
+            finally
+            {
+                if (File.Exists(tempAudio)) File.Delete(tempAudio);
+                if (File.Exists(tempDoc)) File.Delete(tempDoc);
+            }
         }
     }
 }
