@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using CliniKa.Application;
 using CliniKa.Application.Abstractions.Services;
 
@@ -10,92 +12,148 @@ namespace CliniKa.Infrastructure.Services
 {
     public class LangFlowService : ILangFlowService
     {
-        private readonly HttpClient _httpClient;
-
-        public LangFlowService(HttpClient httpClient)
-        {
-            _httpClient = httpClient;
-        }
+        private const string WebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/aN5md3tHu7izwg01SvZ3C";
+        private const string HelperScriptName = "langflow_helper.js";
 
         public async Task<GeneralResult<string>> TriggerDiagnosisFlowAsync(
             int sessionId,
-            string audioFilePath,
-            List<string> documentFilePaths)
+            IFormFile audioFile,
+            List<IFormFile>? documentFiles)
         {
+            var tempFiles = new List<string>();
+            // Enforce 60 seconds cancellation boundary for process safety
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+
             try
             {
-                var url = "https://cloud.activepieces.com/api/v1/webhooks/p1CEPLFpP2z8qBAhZA48A/sync";
+                // 1. Save audio to temp file
+                var tempAudioPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}{Path.GetExtension(audioFile.FileName)}");
+                await SaveFormFileToTempAsync(audioFile, tempAudioPath);
+                tempFiles.Add(tempAudioPath);
 
-                using var request = new HttpRequestMessage(HttpMethod.Post, url);
-                var multipartContent = new MultipartFormDataContent();
-
-                // Add sessionId
-                multipartContent.Add(new StringContent(sessionId.ToString()), "sessionId");
-
-                // Add audio file (under key 'file')
-                if (File.Exists(audioFilePath))
+                // 2. Save document files to temp
+                var docTempPaths = new List<(string Path, string OriginalName)>();
+                if (documentFiles != null)
                 {
-                    var audioFileName = Path.GetFileName(audioFilePath);
-                    var audioBytes = await File.ReadAllBytesAsync(audioFilePath);
-                    
-                    var audioContent = new ByteArrayContent(audioBytes);
-                    audioContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(GetContentType(audioFileName));
-                    multipartContent.Add(audioContent, "file", audioFileName);
-                }
-
-                // Add documents (under keys image1, image2, image3...)
-                if (documentFilePaths != null)
-                {
-                    for (int i = 0; i < documentFilePaths.Count; i++)
+                    foreach (var doc in documentFiles)
                     {
-                        var path = documentFilePaths[i];
-                        if (File.Exists(path))
-                        {
-                            var fileName = Path.GetFileName(path);
-                            var fileBytes = await File.ReadAllBytesAsync(path);
-
-                            var docContent = new ByteArrayContent(fileBytes);
-                            docContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(GetContentType(fileName));
-                            
-                            var key = $"image{i + 1}";
-                            multipartContent.Add(docContent, key, fileName);
-                        }
+                        if (doc.Length == 0) continue;
+                        var tempDocPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}{Path.GetExtension(doc.FileName)}");
+                        await SaveFormFileToTempAsync(doc, tempDocPath);
+                        tempFiles.Add(tempDocPath);
+                        docTempPaths.Add((tempDocPath, doc.FileName));
                     }
                 }
 
-                request.Content = multipartContent;
-
-                var response = await _httpClient.SendAsync(request);
-
-                if (!response.IsSuccessStatusCode)
+                // 3. Resolve path cleanly
+                var scriptPath = ResolveHelperScriptPath();
+                if (scriptPath == null)
                 {
-                    var errorDetails = await response.Content.ReadAsStringAsync();
-                    return GeneralResult<string>.Failure($"Activepieces webhook returned error status code: {response.StatusCode}. Details: {errorDetails}");
+                    return GeneralResult<string>.Failure($"Could not find {HelperScriptName}. Ensure it exists alongside the execution directory.");
                 }
 
-                var responseContent = await response.Content.ReadAsStringAsync();
-                return GeneralResult<string>.Success(responseContent, "Activepieces webhook triggered successfully.");
+                // 4. Build process using ArgumentList (safe escaping for paths with spaces)
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "node",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                startInfo.ArgumentList.Add(scriptPath);
+                startInfo.ArgumentList.Add(WebhookUrl);
+                startInfo.ArgumentList.Add(sessionId.ToString());
+                startInfo.ArgumentList.Add(tempAudioPath);
+                startInfo.ArgumentList.Add(audioFile.FileName);
+
+                foreach (var (path, name) in docTempPaths)
+                {
+                    startInfo.ArgumentList.Add(path);
+                    startInfo.ArgumentList.Add(name);
+                }
+
+                Console.WriteLine($"[LangFlowService] Triggering Activepieces flow for Session {sessionId}...");
+                using var process = Process.Start(startInfo);
+                if (process == null)
+                {
+                    return GeneralResult<string>.Failure("Failed to start Node.js helper process.");
+                }
+
+                var outputTask = process.StandardOutput.ReadToEndAsync();
+                var errorTask = process.StandardError.ReadToEndAsync();
+
+                // Structured waiting bound to the cancellation lifecycle token
+                await process.WaitForExitAsync(cts.Token);
+
+                var output = await outputTask;
+                var error = await errorTask;
+
+                Console.WriteLine($"[LangFlowService] Node.js helper exited with code {process.ExitCode}");
+
+                if (process.ExitCode != 0 || string.IsNullOrEmpty(output))
+                {
+                    Console.WriteLine($"[LangFlowService] Error: {error}");
+                    return GeneralResult<string>.Failure($"Node.js helper error: {error}");
+                }
+
+                // 5. Parse JSON output
+                using var jsonDoc = System.Text.Json.JsonDocument.Parse(output);
+                var root = jsonDoc.RootElement;
+                var statusCode = root.GetProperty("statusCode").GetInt32();
+                var body = root.GetProperty("body").GetString() ?? string.Empty;
+
+                Console.WriteLine($"[LangFlowService] Activepieces responded with status {statusCode}");
+
+                if (statusCode >= 200 && statusCode < 300)
+                {
+                    return GeneralResult<string>.Success(body, "Activepieces flow triggered successfully.");
+                }
+
+                return GeneralResult<string>.Failure($"Activepieces returned status {statusCode}. Details: {body}");
+            }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("[LangFlowService] Execution aborted due to target timeout constraint.");
+                return GeneralResult<string>.Failure("External workflow orchestration process timed out.");
             }
             catch (Exception ex)
             {
-                return GeneralResult<string>.Failure($"Exception occurred while triggering Activepieces flow: {ex.Message}");
+                Console.WriteLine($"[LangFlowService] Exception: {ex.Message}");
+                return GeneralResult<string>.Failure($"Exception triggering Activepieces flow: {ex.Message}");
+            }
+            finally
+            {
+                // Clean up temp files safely
+                foreach (var tempFile in tempFiles)
+                {
+                    try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch { }
+                }
             }
         }
 
-        private static string GetContentType(string fileName)
+        private static async Task SaveFormFileToTempAsync(IFormFile file, string path)
         {
-            var ext = Path.GetExtension(fileName).ToLower();
-            return ext switch
+            using var stream = new FileStream(path, FileMode.Create);
+            await file.CopyToAsync(stream);
+        }
+
+        private static string? ResolveHelperScriptPath()
+        {
+            var candidates = new[]
             {
-                ".mp3" => "audio/mpeg",
-                ".m4a" => "audio/mp4",
-                ".wav" => "audio/wav",
-                ".pdf" => "application/pdf",
-                ".jpg" => "image/jpeg",
-                ".jpeg" => "image/jpeg",
-                ".png" => "image/png",
-                _ => "application/octet-stream"
+                Path.Combine(AppContext.BaseDirectory, HelperScriptName),
+                Path.Combine(Directory.GetCurrentDirectory(), HelperScriptName),
+                Path.Combine(Directory.GetCurrentDirectory(), "CliniKa.Presentation", HelperScriptName)
             };
+
+            foreach (var path in candidates)
+            {
+                if (File.Exists(path)) return path;
+            }
+
+            return null;
         }
     }
 }
