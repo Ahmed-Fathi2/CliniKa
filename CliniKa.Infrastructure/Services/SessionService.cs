@@ -1,18 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using CliniKa.Application;
 using CliniKa.Application.Abstractions.Authentication;
 using CliniKa.Application.Abstractions.Services;
 using CliniKa.Application.DTOs.FormFile;
-using CliniKa.Application.DTOs.Sessions;
 using CliniKa.Application.DTOs.Langflow;
+using CliniKa.Application.DTOs.Sessions;
 using CliniKa.Domain.Entities;
 using CliniKa.Domain.Repositories;
+using Microsoft.AspNetCore.Http;
 
 namespace CliniKa.Infrastructure.Services
 {
@@ -84,22 +78,16 @@ namespace CliniKa.Infrastructure.Services
                 return GeneralResult<string>.NotFound("Clinical Session not found.");
             }
 
-            // 1. Upload audio file
+            // 1. Upload audio file to local storage (for our records)
             var uploadAudioRequest = new UploadFileRequest(audioFile);
             var audioUploadResult = await _fileService.UploadFileAsync(uploadAudioRequest, baseUrl, schema, host);
             if (!audioUploadResult.IsSuccess || string.IsNullOrEmpty(audioUploadResult.Data))
             {
                 return GeneralResult<string>.Failure("Failed to upload audio file.");
             }
-            var audioUrl = audioUploadResult.Data;
 
-            // Resolve local path for audio file
-            var audioFileName = Path.GetFileName(new Uri(audioUrl).LocalPath);
-            var localAudioPath = Path.Combine(baseUrl, "uploads", audioFileName);
-
-            // 2. Upload documents
+            // 2. Upload documents to local storage (for our records)
             var uploadedDocs = new List<(IFormFile File, string SavedUrl)>();
-            var localDocPaths = new List<string>();
             if (documents != null)
             {
                 foreach (var doc in documents)
@@ -112,8 +100,6 @@ namespace CliniKa.Infrastructure.Services
                         return GeneralResult<string>.Failure("Failed to upload one or more documents.");
                     }
                     uploadedDocs.Add((doc, docResult.Data));
-                    var docFileName = Path.GetFileName(new Uri(docResult.Data).LocalPath);
-                    localDocPaths.Add(Path.Combine(baseUrl, "uploads", docFileName));
                 }
             }
 
@@ -125,16 +111,53 @@ namespace CliniKa.Infrastructure.Services
 
             await _unitOfWork.SaveChangesAsync();
 
-            // 5. Trigger the Activepieces flow in the background (fire-and-forget)
+            // 5. Copy IFormFile content to MemoryStreams so they survive after the HTTP request ends.
+            //    The original IFormFile streams get disposed when the request completes,
+            //    so we must buffer them before firing the background task.
+            var audioBytes = await ReadFormFileToBytes(audioFile);
+            var audioFileName = audioFile.FileName;
+            var audioContentType = audioFile.ContentType;
+
+            var docBytesList = new List<(byte[] Bytes, string FileName, string ContentType)>();
+            if (documents != null)
+            {
+                foreach (var doc in documents)
+                {
+                    if (doc.Length == 0) continue;
+                    var bytes = await ReadFormFileToBytes(doc);
+                    docBytesList.Add((bytes, doc.FileName, doc.ContentType));
+                }
+            }
+
+            // 6. Trigger the Activepieces flow in the background (fire-and-forget).
+            //    The flow returns 200 OK immediately and calls back when done.
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await _langFlowService.TriggerDiagnosisFlowAsync(sessionId, localAudioPath, localDocPaths);
+                    // Create in-memory IFormFile wrappers from the buffered bytes
+                    var bufferedAudio = CreateFormFileFromBytes(audioBytes, audioFileName, audioContentType);
+                    var bufferedDocs = new List<IFormFile>();
+                    foreach (var (bytes, name, ct) in docBytesList)
+                    {
+                        bufferedDocs.Add(CreateFormFileFromBytes(bytes, name, ct));
+                    }
+
+                    var triggerResult = await _langFlowService.TriggerDiagnosisFlowAsync(
+                        sessionId, bufferedAudio, bufferedDocs);
+
+                    if (triggerResult.IsSuccess)
+                    {
+                        Console.WriteLine($"[SessionService] Activepieces flow triggered successfully for Session {sessionId}.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[SessionService] Activepieces flow failed for Session {sessionId}: {triggerResult.Message}");
+                    }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // Fail silently in background
+                    Console.WriteLine($"[SessionService] Background trigger exception for Session {sessionId}: {ex.Message}");
                 }
             });
 
@@ -216,6 +239,23 @@ namespace CliniKa.Infrastructure.Services
 
                 session.UploadedDocuments.Add(uploadedDoc);
             }
+        }
+
+        private static async Task<byte[]> ReadFormFileToBytes(IFormFile file)
+        {
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms);
+            return ms.ToArray();
+        }
+
+        private static IFormFile CreateFormFileFromBytes(byte[] bytes, string fileName, string contentType)
+        {
+            var stream = new MemoryStream(bytes);
+            return new FormFile(stream, 0, bytes.Length, "file", fileName)
+            {
+                Headers = new HeaderDictionary(),
+                ContentType = contentType
+            };
         }
     }
 }
