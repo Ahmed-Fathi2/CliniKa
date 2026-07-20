@@ -20,11 +20,8 @@ namespace CliniKa.Infrastructure.Services
         private const string HelperScriptName = "langflow_helper.js";
         private const string HelperInteractionsScriptName = "langflow_trigger_interaction_json_helper.js";
 
-        private readonly IHttpClientFactory _httpClientFactory;
-
-        public LangFlowService(IHttpClientFactory httpClientFactory)
+        public LangFlowService()
         {
-            _httpClientFactory = httpClientFactory;
         }
 
         public async Task<GeneralResult<string>> TriggerDiagnosisFlowAsync(
