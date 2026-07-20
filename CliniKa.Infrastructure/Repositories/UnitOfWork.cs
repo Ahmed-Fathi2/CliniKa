@@ -13,16 +13,28 @@ namespace CliniKa.Infrastructure.Repositories
         public IPatientRepository Patient { get; }
         public IDoctorRepository Doctors { get; }
 
+        public IPrescribedMedicationsRepository PrescribedMedications { get; }
+
+        public IActiveMedicationsRepository ActiveMedications { get; }
+
+        public ISessionAIReportsRepository SessionAIReports { get; }
+
         public UnitOfWork(
-            AppDbContext context, 
+            AppDbContext context,
+            IActiveMedicationsRepository activeMedications,
             IClinicalSessionRepository clinicalSessions, 
             IPatientRepository patient,
-            IDoctorRepository doctors)
+            IPrescribedMedicationsRepository prescribedMedications,
+            IDoctorRepository doctors,
+            ISessionAIReportsRepository sessionAIReports)
         {
             _context = context;
+            ActiveMedications = activeMedications;
             ClinicalSessions = clinicalSessions;
             Patient = patient;
+            PrescribedMedications = prescribedMedications;
             Doctors = doctors;
+            SessionAIReports = sessionAIReports;
         }
 
         public async Task<int> SaveChangesAsync()

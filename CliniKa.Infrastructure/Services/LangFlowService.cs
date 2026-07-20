@@ -7,13 +7,25 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using CliniKa.Application;
 using CliniKa.Application.Abstractions.Services;
+using CliniKa.Application.DTOs.Sessions;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace CliniKa.Infrastructure.Services
 {
     public class LangFlowService : ILangFlowService
     {
         private const string WebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/aN5md3tHu7izwg01SvZ3C";
+        private const string DrugInteractionWebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/irtY6rMKe4Mb1fVjwTuGv";
         private const string HelperScriptName = "langflow_helper.js";
+        private const string HelperInteractionsScriptName = "langflow_trigger_interaction_json_helper.js";
+
+        private readonly IHttpClientFactory _httpClientFactory;
+
+        public LangFlowService(IHttpClientFactory httpClientFactory)
+        {
+            _httpClientFactory = httpClientFactory;
+        }
 
         public async Task<GeneralResult<string>> TriggerDiagnosisFlowAsync(
             int sessionId,
@@ -46,7 +58,7 @@ namespace CliniKa.Infrastructure.Services
                 }
 
                 // 3. Resolve path cleanly
-                var scriptPath = ResolveHelperScriptPath();
+                var scriptPath = ResolveHelperScriptPath(HelperScriptName);
                 if (scriptPath == null)
                 {
                     return GeneralResult<string>.Failure($"Could not find {HelperScriptName}. Ensure it exists alongside the execution directory.");
@@ -139,13 +151,13 @@ namespace CliniKa.Infrastructure.Services
             await file.CopyToAsync(stream);
         }
 
-        private static string? ResolveHelperScriptPath()
+        private static string? ResolveHelperScriptPath(string scriptName)
         {
             var candidates = new[]
             {
-                Path.Combine(AppContext.BaseDirectory, HelperScriptName),
-                Path.Combine(Directory.GetCurrentDirectory(), HelperScriptName),
-                Path.Combine(Directory.GetCurrentDirectory(), "CliniKa.Presentation", HelperScriptName)
+                Path.Combine(AppContext.BaseDirectory, scriptName),
+                Path.Combine(Directory.GetCurrentDirectory(), scriptName),
+                Path.Combine(Directory.GetCurrentDirectory(), "CliniKa.Presentation", scriptName)
             };
 
             foreach (var path in candidates)
@@ -154,6 +166,52 @@ namespace CliniKa.Infrastructure.Services
             }
 
             return null;
+        }
+
+        public async Task<GeneralResult<string>> TriggerDrugInteractionFlowAsync(WorkflowSessionPayloadDto payload)
+        {
+            try
+            {
+                Console.WriteLine($"[LangFlowService] Triggering Drug Interaction Flow for Session {payload.SessionId}...");
+
+                var jsonPayload = JsonSerializer.Serialize(payload);
+
+                var scriptPath = ResolveHelperScriptPath(HelperInteractionsScriptName);
+                if(scriptPath == null)
+                    return GeneralResult<string>.Failure("Could not find langflow_json_helper.js");
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "node",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+
+                startInfo.ArgumentList.Add(scriptPath);
+                startInfo.ArgumentList.Add(DrugInteractionWebhookUrl);
+                startInfo.ArgumentList.Add(jsonPayload);
+
+                using var process = Process.Start(startInfo);
+                if (process == null) return GeneralResult<string>.Failure("Failed to start Node process.");
+
+                var output = await process.StandardOutput.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                using var jsonDoc = System.Text.Json.JsonDocument.Parse(output);
+                var statusCode = jsonDoc.RootElement.GetProperty("statusCode").GetInt32();
+                var body = jsonDoc.RootElement.GetProperty("body").GetString() ?? string.Empty;
+
+                if (statusCode >= 200 && statusCode < 300)
+                    return GeneralResult<string>.Success(body, "Triggered successfully via Node.js");
+
+                return GeneralResult<string>.Failure($"Status {statusCode}: {body}");
+            }
+            catch (Exception ex)
+            {
+                return GeneralResult<string>.Failure($"Exception: {ex.Message}");
+            }
         }
     }
 }

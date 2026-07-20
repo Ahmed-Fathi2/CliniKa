@@ -21,5 +21,8 @@ namespace CliniKa.Application.Abstractions.Services
         Task<GeneralResult<string>> SaveDiagnosisCallbackResultAsync(
             int sessionId,
             LangFlowDiagnosisResult result);
+
+        Task<GeneralResult<WorkflowSessionPayloadDto>> GetWorkflowPayloadAsync(int sessionId);
+
     }
 }

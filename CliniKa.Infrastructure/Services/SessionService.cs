@@ -1,6 +1,7 @@
 using CliniKa.Application;
 using CliniKa.Application.Abstractions.Authentication;
 using CliniKa.Application.Abstractions.Services;
+using CliniKa.Application.DTOs;
 using CliniKa.Application.DTOs.FormFile;
 using CliniKa.Application.DTOs.Langflow;
 using CliniKa.Application.DTOs.Sessions;
@@ -217,6 +218,47 @@ namespace CliniKa.Infrastructure.Services
             // TODO: Broadcast the results to frontend clients using SignalR Hub (e.g. SessionHub)
 
             return GeneralResult<string>.Success("Callback result saved successfully.", "Success");
+        }
+
+        public async Task<GeneralResult<WorkflowSessionPayloadDto>> GetWorkflowPayloadAsync(int sessionId)
+        {
+            var session = await _unitOfWork.ClinicalSessions.GetAsync(s => s.Id == sessionId,false);
+
+            if (session == null)
+                return GeneralResult<WorkflowSessionPayloadDto>.Failure("Session not found");
+
+            var patient = await _unitOfWork.Patient.GetAsync(p => p.Id == session.PatientId, trackChanges: false);
+
+            var prescribedMedications = await _unitOfWork.PrescribedMedications.GetAllAsync(
+                    filter: m => m.SessionId == sessionId,
+                    sortBy: null,
+                    isDescending: false,
+                    trackChanges: false);
+
+            var newMedicationsDto = prescribedMedications.Select(m => m.DrugName).FirstOrDefault(); //string.Join(", ", prescribedMedications.Select(m => m.DrugName));
+
+            var activeMedications = await _unitOfWork.ActiveMedications.GetAllAsync(
+                filter: m => m.PatientId == session.PatientId && m.IsActive,
+                sortBy: null,
+                isDescending: false,
+                trackChanges: false);
+
+            var currentMedicationsDto = activeMedications.Select(m => m.DrugName).ToList();
+
+            var aiReport = await _unitOfWork.SessionAIReports.GetAsync(r => r.SessionId == sessionId, trackChanges: false);
+
+            var payload = new WorkflowSessionPayloadDto
+            {
+                SessionId = session.Id,
+                PatientId = session.PatientId,
+                PatientName = patient?.FullName,
+                AudioTranscript = session.AudioTranscript,
+                NewMedications = newMedicationsDto,
+                CurrentMedications = currentMedicationsDto,
+                PossibleDiagnoses = aiReport?.PossibleDiagnoses
+            };
+
+            return GeneralResult<WorkflowSessionPayloadDto>.Success(payload);
         }
 
         private void RegisterUploadedDocuments(

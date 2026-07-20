@@ -69,6 +69,7 @@ namespace CliniKa.Infrastructure.Extensions
             services.AddTransient<IEmailSender, SendGridEmailSender>();
 
             // Configure Activepieces LangFlow Service (uses Node.js helper for SSL compatibility)
+            services.AddHttpClient();
             services.AddScoped<ILangFlowService, LangFlowService>();
 
             // Register repositories
@@ -76,6 +77,9 @@ namespace CliniKa.Infrastructure.Extensions
             services.AddScoped<IClinicalSessionRepository, ClinicalSessionRepository>();
             services.AddScoped<IPatientRepository, PatientRepository>();
             services.AddScoped<IDoctorRepository, DoctorRepository>();
+            services.AddScoped<IPrescribedMedicationsRepository, PrescribedMedicationsRepository>();
+            services.AddScoped<IActiveMedicationsRepository, ActiveMedicationsRepository>();
+            services.AddScoped<ISessionAIReportsRepository, SessionAIReportsRepository>();
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IJwtProvider, JwtProvider>();

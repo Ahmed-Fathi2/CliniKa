@@ -1,6 +1,7 @@
+using CliniKa.Application.DTOs.Sessions;
+using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 
 namespace CliniKa.Application.Abstractions.Services
 {
@@ -18,5 +19,7 @@ namespace CliniKa.Application.Abstractions.Services
             int sessionId,
             IFormFile audioFile,
             List<IFormFile>? documentFiles);
+
+        Task<GeneralResult<string>> TriggerDrugInteractionFlowAsync(WorkflowSessionPayloadDto payload);
     }
 }
