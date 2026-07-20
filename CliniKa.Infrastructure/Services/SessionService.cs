@@ -253,7 +253,7 @@ namespace CliniKa.Infrastructure.Services
                 PatientId = session.PatientId,
                 PatientName = patient?.FullName,
                 AudioTranscript = session.AudioTranscript,
-                NewMedications = newMedicationsDto,
+                //NewMedications = newMedicationsDto,
                 CurrentMedications = currentMedicationsDto,
                 PossibleDiagnoses = aiReport?.PossibleDiagnoses
             };

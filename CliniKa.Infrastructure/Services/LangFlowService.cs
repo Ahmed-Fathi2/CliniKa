@@ -16,7 +16,7 @@ namespace CliniKa.Infrastructure.Services
     public class LangFlowService : ILangFlowService
     {
         private const string WebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/aN5md3tHu7izwg01SvZ3C";
-        private const string DrugInteractionWebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/irtY6rMKe4Mb1fVjwTuGv";
+        private const string DrugInteractionWebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/irtY6rMKe4Mb1fVjwTuGv/sync";
         private const string HelperScriptName = "langflow_helper.js";
         private const string HelperInteractionsScriptName = "langflow_trigger_interaction_json_helper.js";
 
@@ -168,17 +168,22 @@ namespace CliniKa.Infrastructure.Services
             return null;
         }
 
-        public async Task<GeneralResult<string>> TriggerDrugInteractionFlowAsync(WorkflowSessionPayloadDto payload)
+        public async Task<GeneralResult<object>> TriggerDrugInteractionFlowAsync(WorkflowSessionPayloadDto payload)
         {
+            var tempFilePath = Path.Combine(Path.GetTempPath(), $"payload_{Guid.NewGuid()}.json");
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+
             try
             {
                 Console.WriteLine($"[LangFlowService] Triggering Drug Interaction Flow for Session {payload.SessionId}...");
 
                 var jsonPayload = JsonSerializer.Serialize(payload);
 
+                await File.WriteAllTextAsync(tempFilePath, jsonPayload, cts.Token);
+
                 var scriptPath = ResolveHelperScriptPath(HelperInteractionsScriptName);
-                if(scriptPath == null)
-                    return GeneralResult<string>.Failure("Could not find langflow_json_helper.js");
+                if (scriptPath == null)
+                    return GeneralResult<object>.Failure($"Could not find {HelperInteractionsScriptName}.");
 
                 var startInfo = new ProcessStartInfo
                 {
@@ -191,26 +196,38 @@ namespace CliniKa.Infrastructure.Services
 
                 startInfo.ArgumentList.Add(scriptPath);
                 startInfo.ArgumentList.Add(DrugInteractionWebhookUrl);
-                startInfo.ArgumentList.Add(jsonPayload);
+                startInfo.ArgumentList.Add(tempFilePath);
 
                 using var process = Process.Start(startInfo);
-                if (process == null) return GeneralResult<string>.Failure("Failed to start Node process.");
+                if (process == null) return GeneralResult<object>.Failure("Failed to start Node process.");
 
                 var output = await process.StandardOutput.ReadToEndAsync();
-                await process.WaitForExitAsync();
+                var error = await process.StandardError.ReadToEndAsync();
 
-                using var jsonDoc = System.Text.Json.JsonDocument.Parse(output);
+                await process.WaitForExitAsync(cts.Token);
+
+                if (process.ExitCode != 0 || string.IsNullOrEmpty(output))
+                    return GeneralResult<object>.Failure($"Node.js helper error: {error}");
+
+                using var jsonDoc = JsonDocument.Parse(output);
                 var statusCode = jsonDoc.RootElement.GetProperty("statusCode").GetInt32();
-                var body = jsonDoc.RootElement.GetProperty("body").GetString() ?? string.Empty;
+                var bodyString = jsonDoc.RootElement.GetProperty("body").GetString() ?? string.Empty;
 
                 if (statusCode >= 200 && statusCode < 300)
-                    return GeneralResult<string>.Success(body, "Triggered successfully via Node.js");
+                {
+                    var parsedBody = JsonSerializer.Deserialize<object>(bodyString);
+                    return GeneralResult<object>.Success(parsedBody, "Triggered successfully via Node.js");
+                }
 
-                return GeneralResult<string>.Failure($"Status {statusCode}: {body}");
+                return GeneralResult<object>.Failure($"Status {statusCode}: {bodyString}");
             }
             catch (Exception ex)
             {
-                return GeneralResult<string>.Failure($"Exception: {ex.Message}");
+                return GeneralResult<object>.Failure($"Exception: {ex.Message}");
+            }
+            finally
+            {
+                try { if (File.Exists(tempFilePath)) File.Delete(tempFilePath); } catch { }
             }
         }
     }

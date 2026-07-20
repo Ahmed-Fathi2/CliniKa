@@ -1,7 +1,10 @@
-﻿const https = require('https');
+﻿const fs = require('fs');
+const https = require('https');
 
 const url = process.argv[2];
-const payload = process.argv[3];
+const filePath = process.argv[3]; 
+
+const payload = fs.readFileSync(filePath, 'utf8');
 
 const req = https.request(url, {
     method: 'POST',
@@ -13,11 +16,14 @@ const req = https.request(url, {
     let data = '';
     res.on('data', (chunk) => data += chunk);
     res.on('end', () => {
+        try { fs.unlinkSync(filePath); } catch (e) { }
+
         console.log(JSON.stringify({ statusCode: res.statusCode, body: data }));
     });
 });
 
 req.on('error', (e) => {
+    try { fs.unlinkSync(filePath); } catch (e) { }
     console.log(JSON.stringify({ statusCode: 500, body: e.message }));
 });
 

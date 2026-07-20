@@ -20,6 +20,6 @@ namespace CliniKa.Application.Abstractions.Services
             IFormFile audioFile,
             List<IFormFile>? documentFiles);
 
-        Task<GeneralResult<string>> TriggerDrugInteractionFlowAsync(WorkflowSessionPayloadDto payload);
+        Task<GeneralResult<object>> TriggerDrugInteractionFlowAsync(WorkflowSessionPayloadDto payload);
     }
 }
