@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Xunit;
 using CliniKa.Infrastructure.Services;
+using CliniKa.Application.DTOs.Sessions;
 
 namespace CliniKa.Tests
 {
@@ -41,6 +42,27 @@ namespace CliniKa.Tests
             // Assert - we only verify it doesn't throw and returns a result.
             // It will likely fail if Node.js or the helper script isn't available,
             // but the method should handle that gracefully.
+            Assert.NotNull(result);
+        }
+
+        [Fact]
+        public async Task TriggerDrugInteractionFlowAsync_ShouldAcceptPayloadAndReturnResult()
+        {
+            var service = new LangFlowService();
+
+            var mochPayload = new WorkflowSessionPayloadDto
+            {
+                SessionId = 105,
+                PatientId = 20,
+                PatientName = "Test Patient",
+                AudioTranscript = "Doctor: Good morning. Patient: I have a headache.",
+                NewMedications = new List<string> { "Verteporfin" },
+                CurrentMedications = new List<string> { "Trioxsalen" },
+                PossibleDiagnoses = "Migraine"
+            };
+
+            var result = await service.TriggerDrugInteractionFlowAsync(mochPayload);
+
             Assert.NotNull(result);
         }
     }
