@@ -18,15 +18,18 @@ namespace CliniKa.Presentation.Controllers
         private readonly ISessionService _sessionService;
         private readonly ILangFlowService _langFlowService;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IDiagnosisNotificationService _notificationService;
 
         public SessionsController(
             ISessionService sessionService,
             ILangFlowService langFlowService,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IDiagnosisNotificationService notificationService)
         {
             _sessionService = sessionService;
             _langFlowService = langFlowService;
             _webHostEnvironment = webHostEnvironment;
+            _notificationService = notificationService;
         }
 
         [HttpPost]
@@ -115,7 +118,12 @@ namespace CliniKa.Presentation.Controllers
             var saveResult = await _sessionService.SaveDiagnosisCallbackResultAsync(sessionId, result);
 
             if (saveResult.IsSuccess)
+            {
+                // Notify any waiting SSE clients that the diagnosis is complete
+                _notificationService.NotifyDiagnosisComplete(sessionId);
+                System.Console.WriteLine($"[DiagnosisCallback] SSE notification sent for Session {sessionId}");
                 return Ok(saveResult);
+            }
 
             if (saveResult.Status == ResultStatus.NotFound)
                 return NotFound(saveResult);
@@ -137,6 +145,39 @@ namespace CliniKa.Presentation.Controllers
                 return Ok(workflowResult);
 
             return StatusCode(500, workflowResult.Message);
+        }
+
+        /// <summary>
+        /// SSE endpoint — the frontend connects here after triggering a diagnosis.
+        /// The connection stays open until the callback arrives, then sends
+        /// an "diagnosis-complete" event and closes.
+        /// </summary>
+        [HttpGet("{sessionId:int}/diagnosis-stream")]
+        public async Task DiagnosisStream([FromRoute] int sessionId)
+        {
+            // 1. Set SSE headers
+            Response.Headers["Content-Type"] = "text/event-stream";
+            Response.Headers["Cache-Control"] = "no-cache";
+            Response.Headers["Connection"] = "keep-alive";
+
+            // 2. Send initial "connected" event so the frontend knows the stream is alive
+            await Response.WriteAsync($"event: connected\ndata: {{\"sessionId\": {sessionId}}}\n\n");
+            await Response.Body.FlushAsync();
+
+            // 3. Wait for the diagnosis callback to arrive (or client to disconnect)
+            var result = await _notificationService.WaitForNotificationAsync(
+                sessionId, HttpContext.RequestAborted);
+
+            if (result.IsSuccess)
+            {
+                // 4. Callback arrived — send the "diagnosis-complete" event
+                await Response.WriteAsync($"event: diagnosis-complete\ndata: {{\"sessionId\": {sessionId}, \"status\": \"completed\"}}\n\n");
+                await Response.Body.FlushAsync();
+            }
+
+            // 5. Connection closes automatically when the method returns.
+            //    The frontend's EventSource will fire the 'error' event with
+            //    readyState = CLOSED, which is the expected behavior.
         }
     }
 }

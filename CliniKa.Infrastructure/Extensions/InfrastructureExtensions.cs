@@ -86,6 +86,10 @@ namespace CliniKa.Infrastructure.Extensions
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IFileService, FileService>();
             services.AddScoped<ISessionService, SessionService>();
+
+            // SSE Notification Service — MUST be Singleton so the same instance
+            // is shared between the SSE endpoint (reader) and the callback (writer).
+            services.AddSingleton<IDiagnosisNotificationService, SseNotificationService>();
             services.AddScoped<IPatientService, PatientService>();
 
             services.AddHttpContextAccessor();
