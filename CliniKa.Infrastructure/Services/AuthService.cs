@@ -97,6 +97,9 @@ namespace CliniKa.Infrastructure.Services
             if (user is null)
                 return GeneralResult<LoginResponse>.Failure("Invalid email or password.");
 
+            if (!user.IsActive)
+                return GeneralResult<LoginResponse>.Failure("User account is deactivated.");
+
             var result = await _signInManager.CheckPasswordSignInAsync(user, loginRequest.Password, lockoutOnFailure: false);
 
             if (!result.Succeeded)
@@ -147,7 +150,9 @@ namespace CliniKa.Infrastructure.Services
                 UserName = registerRequest.Email,
                 Email = registerRequest.Email,
                 FirstName = registerRequest.FirstName,
-                LastName = registerRequest.LastName
+                LastName = registerRequest.LastName,
+                PhoneNumber = registerRequest.PhoneNumber,
+                IsActive = true
             };
             var createResult = await _userManager.CreateAsync(user, registerRequest.Password);
 
@@ -166,25 +171,26 @@ namespace CliniKa.Infrastructure.Services
             }
 
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var baseUrl = _configuration["App:BaseUrl"];
-            var confirmationLink =
-                $"{baseUrl}/api/auth/confirm-email?UserId={Uri.EscapeDataString(user.Id)}&Token={Uri.EscapeDataString(token)}";
+            //var baseUrl = _configuration["App:BaseUrl"];
+            //var confirmationLink =
+            //    $"{baseUrl}/api/auth/confirm-email?UserId={Uri.EscapeDataString(user.Id)}&Token={Uri.EscapeDataString(token)}";
 
 
-            await _emailSender.SendAsync(
-                user.Email!,
-                "Confirm your email",
-                $"""
-                <p>Hello {user.FirstName},</p>
-                <p>Please confirm your email by clicking this link:</p>
-                <p><a href="{confirmationLink}">Confirm Email</a></p>
-                """);
+            //await _emailSender.SendAsync(
+            //    user.Email!,
+            //    "Confirm your email",
+            //    $"""
+            //    <p>Hello {user.FirstName},</p>
+            //    <p>Please confirm your email by clicking this link:</p>
+            //    <p><a href="{confirmationLink}">Confirm Email</a></p>
+            //    """);
 
             var response = new RegisterResponse(
                 Id: user.Id,
                 FirstName: user.FirstName,
                 LastName: user.LastName,
-                Email: user.Email!
+                Email: user.Email!,
+                PhoneNumber: user.PhoneNumber!
                 );
 
             return GeneralResult<RegisterResponse>.Success(response, "User registered successfully.");

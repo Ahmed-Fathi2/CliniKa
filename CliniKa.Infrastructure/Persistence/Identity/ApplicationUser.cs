@@ -7,6 +7,7 @@ namespace CliniKa.Infrastructure.Persistence.Identity
     {
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
 
         // Navigation properties
         public virtual Doctor? Doctor { get; set; }

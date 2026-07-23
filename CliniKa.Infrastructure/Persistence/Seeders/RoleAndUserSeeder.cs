@@ -57,6 +57,7 @@ namespace CliniKa.Infrastructure.Persistence.Seeders
                 EmailConfirmed = true,
                 FirstName = "Admin",
                 LastName = "CliniKa",
+                IsActive = true,
                 SecurityStamp = "d87a4b0d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
                 ConcurrencyStamp = "8e445865-a24d-4543-a6c6-9443d048cdb9",
                 PasswordHash = "AQAAAAIAAYagAAAAENG89Ckz0JyxHoDFcsHCfu2gHIZenH3nbu7HvWo4TADxbT94S7/KjFXJmmwqZU+vfQ=="
@@ -73,6 +74,7 @@ namespace CliniKa.Infrastructure.Persistence.Seeders
                 EmailConfirmed = true,
                 FirstName = "Ahmad",
                 LastName = "Fathi",
+                IsActive = true,
                 SecurityStamp = "7c6a9b4d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
                 ConcurrencyStamp = "8c6a9b4d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
                 PasswordHash = "AQAAAAIAAYagAAAAENG89Ckz0JyxHoDFcsHCfu2gHIZenH3nbu7HvWo4TADxbT94S7/KjFXJmmwqZU+vfQ=="
@@ -89,6 +91,7 @@ namespace CliniKa.Infrastructure.Persistence.Seeders
                 EmailConfirmed = true,
                 FirstName = "John",
                 LastName = "Doe",
+                IsActive = true,
                 SecurityStamp = "5c6a9b4d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
                 ConcurrencyStamp = "6c6a9b4d-7c2a-4c9b-9a7e-8c3b6f2e1a9d",
                 PasswordHash = "AQAAAAIAAYagAAAAENG89Ckz0JyxHoDFcsHCfu2gHIZenH3nbu7HvWo4TADxbT94S7/KjFXJmmwqZU+vfQ=="
