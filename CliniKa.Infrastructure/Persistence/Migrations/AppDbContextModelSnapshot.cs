@@ -602,11 +602,18 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("FirstName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("LastName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -669,6 +676,7 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                             Email = "admin@clinika.com",
                             EmailConfirmed = true,
                             FirstName = "Admin",
+                            IsActive = true,
                             LastName = "CliniKa",
                             LockoutEnabled = false,
                             NormalizedEmail = "ADMIN@CLINIKA.COM",
@@ -687,6 +695,7 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                             Email = "doctor@clinika.com",
                             EmailConfirmed = true,
                             FirstName = "Ahmad",
+                            IsActive = true,
                             LastName = "Fathi",
                             LockoutEnabled = false,
                             NormalizedEmail = "DOCTOR@CLINIKA.COM",
@@ -705,6 +714,7 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                             Email = "patient@clinika.com",
                             EmailConfirmed = true,
                             FirstName = "John",
+                            IsActive = true,
                             LastName = "Doe",
                             LockoutEnabled = false,
                             NormalizedEmail = "PATIENT@CLINIKA.COM",
