@@ -6,6 +6,7 @@ using System.Reflection;
 using CliniKa.Application.Validators;
 using CliniKa.Application.DTOs.Authentication;
 using CliniKa.Application.DTOs.User;
+using CliniKa.Application.DTOs.Role;
 
 namespace CliniKa.Application.Extensions
 {
@@ -20,6 +21,7 @@ namespace CliniKa.Application.Extensions
             services.AddScoped<IValidator<ForgetPasswordRequest>, ForgetPasswordRequestValidator>();
             services.AddScoped<IValidator<ResetPasswordRequest>, ResetPasswordRequestValidator>();
             services.AddScoped<IValidator<CreateUserRequest>, CreateUserRequestValidator>();
+            services.AddScoped<IValidator<CreateRoleRequest>, CreateRoleRequestValidator>();
 
             // Mapster configuration
             var config = TypeAdapterConfig.GlobalSettings;

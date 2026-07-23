@@ -85,6 +85,7 @@ namespace CliniKa.Infrastructure.Extensions
             services.AddScoped<IJwtProvider, JwtProvider>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IRoleService, RoleService>();
             services.AddScoped<IFileService, FileService>();
             services.AddScoped<ISessionService, SessionService>();
 
