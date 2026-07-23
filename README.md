@@ -47,3 +47,5 @@ The solution consists of the following structured layers:
 
 Once the application is running, navigate to the Swagger UI to view and test the API endpoints:
 *   `https://localhost:<port>/swagger`
+
+## Main Features
