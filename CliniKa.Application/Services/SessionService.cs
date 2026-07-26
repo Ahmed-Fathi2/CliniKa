@@ -9,7 +9,7 @@ using CliniKa.Domain.Entities;
 using CliniKa.Domain.Repositories;
 using Microsoft.AspNetCore.Http;
 
-namespace CliniKa.Infrastructure.Services
+namespace CliniKa.Application.Services
 {
     public class SessionService : ISessionService
     {
