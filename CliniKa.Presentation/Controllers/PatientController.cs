@@ -1,6 +1,5 @@
 ﻿using CliniKa.Application;
 using CliniKa.Application.Abstraction;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CliniKa.Presentation.Controllers
@@ -30,7 +29,7 @@ namespace CliniKa.Presentation.Controllers
             }
             return BadRequest(result);
         }
-        [HttpGet("{id:int}/history")]
+        [HttpGet("history/{id:int}")]
         public async Task<IActionResult> GetPatientHistory([FromRoute] int id)
         {
             var result = await _patientService.GetPatientHistoryAsync(id);

@@ -1,12 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Xunit;
-using CliniKa.Infrastructure.Services;
 using CliniKa.Application.DTOs.Sessions;
+using CliniKa.Infrastructure.Services;
+using Microsoft.AspNetCore.Http;
+using System.Text;
 
 namespace CliniKa.Tests
 {

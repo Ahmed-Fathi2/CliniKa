@@ -1,6 +1,6 @@
-﻿using CliniKa.Domain.Entities;
+﻿using CliniKa.Application.Services;
+using CliniKa.Domain.Entities;
 using CliniKa.Domain.Repositories;
-using CliniKa.Infrastructure.Services;
 using Moq;
 using System.Linq.Expressions;
 
