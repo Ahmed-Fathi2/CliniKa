@@ -1,20 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq.Expressions;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Moq;
-using Xunit;
-using Microsoft.AspNetCore.Http;
 using CliniKa.Application;
-using CliniKa.Domain.Entities;
-using CliniKa.Domain.Repositories;
-using CliniKa.Infrastructure.Services;
-using CliniKa.Application.Abstractions.Services;
 using CliniKa.Application.Abstractions.Authentication;
+using CliniKa.Application.Abstractions.Services;
 using CliniKa.Application.DTOs.Langflow;
 using CliniKa.Application.DTOs.Sessions;
+using CliniKa.Application.Services;
+using CliniKa.Domain.Entities;
+using CliniKa.Domain.Repositories;
+using Microsoft.AspNetCore.Http;
+using Moq;
+using System.Linq.Expressions;
 
 namespace CliniKa.Tests
 {
@@ -52,9 +46,9 @@ namespace CliniKa.Tests
         public async Task CreateSessionAsync_ShouldAddSessionAndSave_WhenValidDtoIsProvided()
         {
             var dto = new CreateClinicalSessionDto(1);
-            
+
             _mockCurrentUserService.Setup(c => c.UserId).Returns("doctor-user-id");
-            
+
             var doctor = new Doctor { Id = 2, UserId = "doctor-user-id" };
             _mockDoctorRepo.Setup(r => r.GetAsync(
                 It.IsAny<Expression<Func<Doctor, bool>>>(),
