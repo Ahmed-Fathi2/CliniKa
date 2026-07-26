@@ -11,6 +11,7 @@ namespace CliniKa.Domain.Repositories
         IPrescribedMedicationsRepository PrescribedMedications { get; }
         IActiveMedicationsRepository ActiveMedications { get; }
         ISessionAIReportsRepository SessionAIReports { get; }
+        IChatSessionRepository ChatSessions { get; }
         Task<int> SaveChangesAsync();
 
         // Transaction methods

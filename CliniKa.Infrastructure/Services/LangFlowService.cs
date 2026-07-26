@@ -1,5 +1,6 @@
 using CliniKa.Application;
 using CliniKa.Application.Abstractions.Services;
+using CliniKa.Application.DTOs.Chat;
 using CliniKa.Application.DTOs.Sessions;
 using Microsoft.AspNetCore.Http;
 using System.Diagnostics;
@@ -11,6 +12,8 @@ namespace CliniKa.Infrastructure.Services
     {
         private const string WebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/aN5md3tHu7izwg01SvZ3C";
         private const string DrugInteractionWebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/irtY6rMKe4Mb1fVjwTuGv/sync";
+        // TODO: Replace with your actual ActivePieces chatbot flow webhook URL
+        private const string ChatbotWebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/YOUR_CHATBOT_FLOW_ID/sync";
         private const string HelperScriptName = "langflow_helper.js";
         private const string HelperInteractionsScriptName = "langflow_trigger_interaction_json_helper.js";
 
@@ -223,5 +226,88 @@ namespace CliniKa.Infrastructure.Services
         }
 
 
+        /// <summary>
+        /// Sends system prompt + conversation history to the ActivePieces chatbot flow.
+        /// Uses the same Node.js helper pattern (JSON payload via temp file) for SSL compatibility.
+        /// </summary>
+        public async Task<GeneralResult<string>> TriggerChatbotFlowAsync(ChatFlowPayloadDto payload)
+        {
+            var tempFilePath = Path.Combine(Path.GetTempPath(), $"chat_payload_{Guid.NewGuid()}.json");
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+
+            try
+            {
+                Console.WriteLine($"[LangFlowService] Triggering Chatbot Flow...");
+
+                var jsonPayload = JsonSerializer.Serialize(payload);
+                await File.WriteAllTextAsync(tempFilePath, jsonPayload, cts.Token);
+
+                var scriptPath = ResolveHelperScriptPath(HelperInteractionsScriptName);
+                if (scriptPath == null)
+                    return GeneralResult<string>.Failure($"Could not find {HelperInteractionsScriptName}.");
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "node",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+
+                startInfo.ArgumentList.Add(scriptPath);
+                startInfo.ArgumentList.Add(ChatbotWebhookUrl);
+                startInfo.ArgumentList.Add(tempFilePath);
+
+                using var process = Process.Start(startInfo);
+                if (process == null)
+                    return GeneralResult<string>.Failure("Failed to start Node.js helper process.");
+
+                var output = await process.StandardOutput.ReadToEndAsync();
+                var error = await process.StandardError.ReadToEndAsync();
+
+                await process.WaitForExitAsync(cts.Token);
+
+                if (process.ExitCode != 0 || string.IsNullOrEmpty(output))
+                    return GeneralResult<string>.Failure($"Node.js helper error: {error}");
+
+                using var jsonDoc = JsonDocument.Parse(output);
+                var statusCode = jsonDoc.RootElement.GetProperty("statusCode").GetInt32();
+                var bodyString = jsonDoc.RootElement.GetProperty("body").GetString() ?? string.Empty;
+
+                if (statusCode >= 200 && statusCode < 300)
+                {
+                    // Try to extract a "reply"/"response"/"message" field if JSON, otherwise use raw body
+                    try
+                    {
+                        using var replyDoc = JsonDocument.Parse(bodyString);
+                        if (replyDoc.RootElement.TryGetProperty("reply", out var replyProp))
+                            return GeneralResult<string>.Success(replyProp.GetString() ?? bodyString, "Chatbot responded successfully.");
+                        if (replyDoc.RootElement.TryGetProperty("response", out var responseProp))
+                            return GeneralResult<string>.Success(responseProp.GetString() ?? bodyString, "Chatbot responded successfully.");
+                        if (replyDoc.RootElement.TryGetProperty("message", out var messageProp))
+                            return GeneralResult<string>.Success(messageProp.GetString() ?? bodyString, "Chatbot responded successfully.");
+                    }
+                    catch { /* Body is plain text */ }
+
+                    return GeneralResult<string>.Success(bodyString, "Chatbot responded successfully.");
+                }
+
+                return GeneralResult<string>.Failure($"Chatbot flow returned status {statusCode}: {bodyString}");
+            }
+            catch (OperationCanceledException)
+            {
+                return GeneralResult<string>.Failure("Chatbot flow timed out.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[LangFlowService] Chatbot Exception: {ex.Message}");
+                return GeneralResult<string>.Failure($"Exception triggering chatbot flow: {ex.Message}");
+            }
+            finally
+            {
+                try { if (File.Exists(tempFilePath)) File.Delete(tempFilePath); } catch { }
+            }
+        }
     }
 }

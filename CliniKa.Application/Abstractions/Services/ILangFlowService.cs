@@ -1,3 +1,4 @@
+using CliniKa.Application.DTOs.Chat;
 using CliniKa.Application.DTOs.Sessions;
 using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
@@ -21,5 +22,11 @@ namespace CliniKa.Application.Abstractions.Services
             List<IFormFile>? documentFiles);
 
         Task<GeneralResult<object>> TriggerDrugInteractionFlowAsync(WorkflowSessionPayloadDto payload);
+
+        /// <summary>
+        /// Sends the system prompt and conversation history to the Activepieces chatbot flow.
+        /// Returns the AI assistant's reply.
+        /// </summary>
+        Task<GeneralResult<string>> TriggerChatbotFlowAsync(ChatFlowPayloadDto payload);
     }
 }
