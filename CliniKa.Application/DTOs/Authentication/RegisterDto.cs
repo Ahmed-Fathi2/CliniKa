@@ -3,6 +3,7 @@ namespace CliniKa.Application.DTOs.Authentication
     public record RegisterRequest(
         string FirstName,
         string LastName,
+        string PhoneNumber,
         string Email,
         string Password,
         string ConfirmPassword);
@@ -11,6 +12,7 @@ namespace CliniKa.Application.DTOs.Authentication
         string Id,
         string FirstName,
         string LastName,
+        string PhoneNumber,
         string Email
         );
 
