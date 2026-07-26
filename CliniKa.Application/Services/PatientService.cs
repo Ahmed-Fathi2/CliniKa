@@ -65,11 +65,13 @@ namespace CliniKa.Application.Services
                     Severity = pa.Severity
                 }).ToList(),
 
-                ActiveMedications = patient.ActiveMedications.Select(am => new MedicationDto
+                ActiveMedications = patient.ActiveMedications.Where(am => am.IsActive).Select(am => new MedicationDto
                 {
                     DrugName = am.DrugName,
-                    Dosage = am.Dosage,
-                    Frequency = am.Frequency
+                    Dosage = am.Dosage ?? string.Empty,
+                    Frequency = am.Frequency ?? string.Empty,
+                    StartDate = am.StartDate.ToString("yyyy-MM-dd"),
+                    EndDate = am.EndDate?.ToString("yyyy-MM-dd") ?? ""
                 }).ToList()
             };
 
