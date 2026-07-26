@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace CliniKa.Application.DTOs
+namespace CliniKa.Application.DTOs.Patient
 {
     public class PatientReadDto
     {

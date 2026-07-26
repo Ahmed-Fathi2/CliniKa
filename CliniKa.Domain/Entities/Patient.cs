@@ -22,5 +22,6 @@ namespace CliniKa.Domain.Entities
         public virtual ICollection<PatientDisease> PatientDiseases { get; set; } = new List<PatientDisease>();
         public virtual ICollection<PatientAllergy> PatientAllergies { get; set; } = new List<PatientAllergy>();
         public virtual ICollection<ActiveMedication> ActiveMedications { get; set; } = new List<ActiveMedication>();
+        public virtual ICollection<ChatSession> ChatSessions { get; set; } = new List<ChatSession>();
     }
 }

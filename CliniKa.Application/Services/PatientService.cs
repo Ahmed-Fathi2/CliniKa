@@ -1,5 +1,5 @@
 ﻿using CliniKa.Application.Abstraction;
-using CliniKa.Application.DTOs;
+using CliniKa.Application.DTOs.Patient;
 using CliniKa.Domain.Repositories;
 
 namespace CliniKa.Application.Services

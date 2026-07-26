@@ -1,4 +1,4 @@
-﻿namespace CliniKa.Application.DTOs
+﻿namespace CliniKa.Application.DTOs.Patient
 {
     public class MedicationDto
     {

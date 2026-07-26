@@ -60,5 +60,25 @@ namespace CliniKa.Tests
 
             Assert.NotNull(result);
         }
+
+        [Fact]
+        public async Task TriggerChatbotFlowAsync_ShouldAcceptPayloadAndReturnResult()
+        {
+            // Arrange
+            var service = new LangFlowService();
+
+            var chatPayload = new CliniKa.Application.DTOs.Chat.ChatFlowPayloadDto
+            {
+                SystemPrompt = "Patient: John Doe, Age: 35",
+                NewQuestion = "What medications am I taking?",
+                Messages = new List<CliniKa.Application.DTOs.Chat.ChatMessageDto>()
+            };
+
+            // Act
+            var result = await service.TriggerChatbotFlowAsync(chatPayload);
+
+            // Assert
+            Assert.NotNull(result);
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿using CliniKa.Application.DTOs;
+﻿using CliniKa.Application.DTOs.Patient;
 
 namespace CliniKa.Application.Abstraction
 {
