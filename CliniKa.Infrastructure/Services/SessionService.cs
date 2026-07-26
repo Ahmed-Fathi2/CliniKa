@@ -238,7 +238,7 @@ namespace CliniKa.Infrastructure.Services
             var newMedicationsDto = prescribedMedications.Select(m => m.DrugName).FirstOrDefault(); //string.Join(", ", prescribedMedications.Select(m => m.DrugName));
 
             var activeMedications = await _unitOfWork.ActiveMedications.GetAllAsync(
-                filter: m => m.PatientId == session.PatientId && m.IsActive,
+                filter: m => m.PatientId == session.PatientId && (m.EndDate == null || m.EndDate.Value.Date >= DateTime.UtcNow.Date),
                 sortBy: null,
                 isDescending: false,
                 trackChanges: false);

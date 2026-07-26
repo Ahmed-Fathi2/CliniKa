@@ -28,15 +28,12 @@ namespace CliniKa.Infrastructure.Persistence.Configurations
 
             builder.Property(m => m.EndDate)
                 .HasColumnType("DATE");
+            
+            builder.Ignore(m => m.IsActive);
 
-            builder.Property(m => m.IsActive)
-                .HasDefaultValue(true)
-                .IsRequired();
-
-            // Index: Active medications for patient
+            // Index: all medications for patient
             builder.HasIndex(m => m.PatientId)
-                .HasDatabaseName("idx_active_meds")
-                .HasFilter("[IsActive] = 1");
+                .HasDatabaseName("idx_active_meds");
 
             // Relationships
             builder.HasOne(m => m.Patient)

@@ -221,5 +221,7 @@ namespace CliniKa.Infrastructure.Services
                 try { if (File.Exists(tempFilePath)) File.Delete(tempFilePath); } catch { }
             }
         }
+
+
     }
 }
