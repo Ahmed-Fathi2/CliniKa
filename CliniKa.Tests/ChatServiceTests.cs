@@ -309,6 +309,131 @@ namespace CliniKa.Tests
         }
 
         [Fact]
+        public async Task StartChatAsync_ShouldBuildSystemPromptCorrectly_WhenPatientHasNoMedicalRecords()
+        {
+            // Arrange
+            int patientId = 2;
+            var patient = new Patient
+            {
+                Id = patientId,
+                FullName = "Empty History Patient",
+                ActiveMedications = new List<ActiveMedication>(),
+                PatientDiseases = new List<PatientDisease>(),
+                PatientAllergies = new List<PatientAllergy>()
+            };
+
+            _mockPatientRepo.Setup(p => p.GetPatientWithIncludesAsync(patientId))
+                .ReturnsAsync(patient);
+
+            _mockUnitOfWork.Setup(u => u.SaveChangesAsync())
+                .ReturnsAsync(1);
+
+            // Act
+            var result = await _chatService.StartChatAsync(patientId);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            _mockChatSessionRepo.Verify(c => c.Add(It.Is<ChatSession>(s => 
+                s.SystemPrompt.Contains("No active medications on record.") &&
+                s.SystemPrompt.Contains("No chronic diseases on record.") &&
+                s.SystemPrompt.Contains("No known allergies on record.")
+            )), Times.Once);
+        }
+
+        [Fact]
+        public async Task SendMessageAsync_ShouldNotOverwriteTitle_WhenTitleIsAlreadyCustomized()
+        {
+            // Arrange
+            int sessionId = 20;
+            string existingTitle = "Existing Chat Title";
+            string userQuestion = "Follow up question";
+            string aiReply = "Follow up reply";
+
+            var chatSession = new ChatSession
+            {
+                Id = sessionId,
+                PatientId = 1,
+                Title = existingTitle,
+                SystemPrompt = "System Prompt",
+                MessagesJson = "[{\"role\":\"user\",\"content\":\"q1\"},{\"role\":\"assistant\",\"content\":\"a1\"}]",
+                IsActive = true
+            };
+
+            _mockChatSessionRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<ChatSession, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<ChatSession, object>>[]>()
+            )).ReturnsAsync(chatSession);
+
+            _mockLangFlowService.Setup(l => l.TriggerChatbotFlowAsync(It.IsAny<ChatFlowPayloadDto>()))
+                .ReturnsAsync(GeneralResult<string>.Success(aiReply, "Success"));
+
+            _mockUnitOfWork.Setup(u => u.SaveChangesAsync())
+                .ReturnsAsync(1);
+
+            // Act
+            var result = await _chatService.SendMessageAsync(sessionId, userQuestion);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(existingTitle, chatSession.Title); // Title remains unchanged!
+        }
+
+        [Fact]
+        public async Task GetChatHistoryAsync_ShouldThrowInvalidOperationException_WhenMessagesJsonIsCorrupted()
+        {
+            // Arrange
+            int sessionId = 30;
+            var chatSession = new ChatSession
+            {
+                Id = sessionId,
+                PatientId = 1,
+                Title = "Corrupted Chat",
+                SystemPrompt = "Prompt",
+                MessagesJson = "{ invalid json content }"
+            };
+
+            _mockChatSessionRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<ChatSession, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<ChatSession, object>>[]>()
+            )).ReturnsAsync(chatSession);
+
+            _mockPatientRepo.Setup(p => p.GetPatientWithIncludesAsync(1))
+                .ReturnsAsync(new Patient { Id = 1, FullName = "Test" });
+
+            // Act & Assert
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _chatService.GetChatHistoryAsync(sessionId));
+        }
+
+        [Fact]
+        public async Task GetPatientChatsAsync_ShouldReturnEmptyList_WhenPatientHasNoActiveChats()
+        {
+            // Arrange
+            int patientId = 5;
+            var patient = new Patient { Id = patientId, FullName = "No Chats Patient" };
+
+            _mockPatientRepo.Setup(p => p.GetByIdAsync(patientId))
+                .ReturnsAsync(patient);
+
+            _mockChatSessionRepo.Setup(c => c.GetAllAsync(
+                It.IsAny<Expression<Func<ChatSession, bool>>>(),
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<ChatSession, object>>[]>()
+            )).ReturnsAsync(new List<ChatSession>());
+
+            // Act
+            var result = await _chatService.GetPatientChatsAsync(patientId);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.NotNull(result.Data);
+            Assert.Empty(result.Data);
+        }
+
+        [Fact]
         public async Task GetPatientChatsAsync_ShouldReturnNotFound_WhenPatientDoesNotExist()
         {
             // Arrange
