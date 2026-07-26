@@ -151,7 +151,7 @@ namespace CliniKa.Infrastructure.Services
                 Email = registerRequest.Email,
                 FirstName = registerRequest.FirstName,
                 LastName = registerRequest.LastName,
-                //PhoneNumber = registerRequest.PhoneNumber,
+                PhoneNumber = registerRequest.PhoneNumber,
                 IsActive = true
             };
             var createResult = await _userManager.CreateAsync(user, registerRequest.Password);
@@ -189,8 +189,8 @@ namespace CliniKa.Infrastructure.Services
                 Id: user.Id,
                 FirstName: user.FirstName,
                 LastName: user.LastName,
-                Email: user.Email!
-                //PhoneNumber: user.PhoneNumber!
+                Email: user.Email!,
+                PhoneNumber: user.PhoneNumber!
                 );
 
             return GeneralResult<RegisterResponse>.Success(response, "User registered successfully.");
