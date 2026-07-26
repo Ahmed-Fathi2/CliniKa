@@ -1,12 +1,8 @@
-﻿using CliniKa.Application;
-using CliniKa.Application.Abstraction;
+﻿using CliniKa.Application.Abstraction;
 using CliniKa.Application.DTOs;
 using CliniKa.Domain.Repositories;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace CliniKa.Infrastructure.Services
+namespace CliniKa.Application.Services
 {
     public class PatientService : IPatientService
     {

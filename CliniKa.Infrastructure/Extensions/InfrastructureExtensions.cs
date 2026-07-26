@@ -1,21 +1,21 @@
+using CliniKa.Application.Abstraction;
+using CliniKa.Application.Abstractions.Authentication;
+using CliniKa.Application.Abstractions.Services;
+using CliniKa.Application.Services;
+using CliniKa.Domain.Repositories;
+using CliniKa.Infrastructure.Authentication;
+using CliniKa.Infrastructure.Options;
+using CliniKa.Infrastructure.Persistence.Context;
+using CliniKa.Infrastructure.Persistence.Identity;
+using CliniKa.Infrastructure.Repositories;
+using CliniKa.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using CliniKa.Domain.Entities;
-using CliniKa.Domain.Repositories;
-using CliniKa.Infrastructure.Authentication;
-using CliniKa.Infrastructure.Options;
-using CliniKa.Infrastructure.Persistence.Context;
-using CliniKa.Infrastructure.Repositories;
-using CliniKa.Infrastructure.Services;
 using System.Text;
-using CliniKa.Application.Abstractions.Authentication;
-using CliniKa.Application.Abstractions.Services;
-using CliniKa.Infrastructure.Persistence.Identity;
-using CliniKa.Application.Abstraction;
 
 namespace CliniKa.Infrastructure.Extensions
 {

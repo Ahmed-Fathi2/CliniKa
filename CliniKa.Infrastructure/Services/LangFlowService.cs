@@ -1,14 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using CliniKa.Application;
 using CliniKa.Application.Abstractions.Services;
 using CliniKa.Application.DTOs.Sessions;
-using System.Net.Http.Json;
+using Microsoft.AspNetCore.Http;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace CliniKa.Infrastructure.Services
