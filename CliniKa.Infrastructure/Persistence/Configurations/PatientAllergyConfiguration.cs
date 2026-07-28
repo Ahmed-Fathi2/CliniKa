@@ -10,7 +10,10 @@ namespace CliniKa.Infrastructure.Persistence.Configurations
         {
             builder.ToTable("PatientAllergies");
 
-            builder.HasKey(pa => new { pa.PatientId, pa.AllergyId });
+            builder.HasKey(pa => pa.Id);
+
+            builder.Property(pa => pa.RawAllergenName)
+                .HasMaxLength(200);
 
             builder.Property(pa => pa.Severity)
                 .HasMaxLength(20);
@@ -28,7 +31,8 @@ namespace CliniKa.Infrastructure.Persistence.Configurations
             builder.HasOne(pa => pa.Allergy)
                 .WithMany(a => a.PatientAllergies)
                 .HasForeignKey(pa => pa.AllergyId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired(false);
 
             builder.HasOne(pa => pa.SourceSession)
                 .WithMany(s => s.PatientAllergies)

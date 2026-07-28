@@ -22,7 +22,7 @@ namespace CliniKa.Infrastructure.Persistence.Configurations
 
             builder.Property(p => p.DateOfBirth)
                 .HasColumnType("DATE")
-                .IsRequired();
+                .IsRequired(false);
 
             builder.Property(p => p.Gender)
                 .HasMaxLength(10);
@@ -37,11 +37,11 @@ namespace CliniKa.Infrastructure.Persistence.Configurations
                 .IsUnique()
                 .HasDatabaseName("idx_patients_national_id");
 
-            builder.Property(p => p.Phone)
-                .HasMaxLength(20);
-
             builder.Property(p => p.CreatedAt)
                 .HasDefaultValueSql("GETDATE()");
+
+            builder.Property(p => p.CompletedAt)
+                .IsRequired(false);
 
             // Identity link: 1-to-1 with ApplicationUser
             builder.Property(p => p.UserId)

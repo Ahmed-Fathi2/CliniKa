@@ -7,12 +7,12 @@ namespace CliniKa.Domain.Entities
     {
         public int Id { get; set; }
         public string FullName { get; set; } = string.Empty;
-        public DateTime DateOfBirth { get; set; }
+        public DateTime? DateOfBirth { get; set; }
         public string? Gender { get; set; }
         public string? BloodType { get; set; }
         public string? NationalId { get; set; }
-        public string? Phone { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? CompletedAt { get; set; }
 
         // Identity link
         public string UserId { get; set; } = string.Empty;

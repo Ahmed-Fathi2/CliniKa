@@ -46,11 +46,6 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
                     b.Property<int>("PatientId")
                         .HasColumnType("int");
 
@@ -63,8 +58,7 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PatientId")
-                        .HasDatabaseName("idx_active_meds")
-                        .HasFilter("[IsActive] = 1");
+                        .HasDatabaseName("idx_active_meds");
 
                     b.HasIndex("SourceSessionId");
 
@@ -91,6 +85,58 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Allergies", (string)null);
+                });
+
+            modelBuilder.Entity("CliniKa.Domain.Entities.ChatSession", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime>("LastMessageAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("MessagesJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValue("[]");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SystemPrompt")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasDefaultValue("New Conversation");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId", "LastMessageAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("idx_chatsessions_patient_lastmsg");
+
+                    b.ToTable("ChatSessions", (string)null);
                 });
 
             modelBuilder.Entity("CliniKa.Domain.Entities.ClinicalSession", b =>
@@ -249,12 +295,15 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                         .HasMaxLength(5)
                         .HasColumnType("nvarchar(5)");
 
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("GETDATE()");
 
-                    b.Property<DateTime>("DateOfBirth")
+                    b.Property<DateTime?>("DateOfBirth")
                         .HasColumnType("DATE");
 
                     b.Property<string>("FullName")
@@ -267,10 +316,6 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("NationalId")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Phone")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
@@ -307,11 +352,21 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("CliniKa.Domain.Entities.PatientAllergy", b =>
                 {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AllergyId")
+                        .HasColumnType("int");
+
                     b.Property<int>("PatientId")
                         .HasColumnType("int");
 
-                    b.Property<int>("AllergyId")
-                        .HasColumnType("int");
+                    b.Property<string>("RawAllergenName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Severity")
                         .HasMaxLength(20)
@@ -320,7 +375,7 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                     b.Property<int?>("SourceSessionId")
                         .HasColumnType("int");
 
-                    b.HasKey("PatientId", "AllergyId");
+                    b.HasKey("Id");
 
                     b.HasIndex("AllergyId");
 
@@ -334,21 +389,31 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("CliniKa.Domain.Entities.PatientDisease", b =>
                 {
-                    b.Property<int>("PatientId")
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    b.Property<int>("DiseaseId")
-                        .HasColumnType("int");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("DiagnosedDate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("DATE")
                         .HasDefaultValueSql("CAST(GETDATE() AS DATE)");
 
+                    b.Property<int?>("DiseaseId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RawDiseaseName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<int?>("SourceSessionId")
                         .HasColumnType("int");
 
-                    b.HasKey("PatientId", "DiseaseId");
+                    b.HasKey("Id");
 
                     b.HasIndex("DiseaseId");
 
@@ -868,6 +933,17 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                     b.Navigation("SourceSession");
                 });
 
+            modelBuilder.Entity("CliniKa.Domain.Entities.ChatSession", b =>
+                {
+                    b.HasOne("CliniKa.Domain.Entities.Patient", "Patient")
+                        .WithMany("ChatSessions")
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Patient");
+                });
+
             modelBuilder.Entity("CliniKa.Domain.Entities.ClinicalSession", b =>
                 {
                     b.HasOne("CliniKa.Domain.Entities.Doctor", "Doctor")
@@ -910,8 +986,7 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                     b.HasOne("CliniKa.Domain.Entities.Allergy", "Allergy")
                         .WithMany("PatientAllergies")
                         .HasForeignKey("AllergyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("CliniKa.Domain.Entities.Patient", "Patient")
                         .WithMany("PatientAllergies")
@@ -936,8 +1011,7 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                     b.HasOne("CliniKa.Domain.Entities.Disease", "Disease")
                         .WithMany("PatientDiseases")
                         .HasForeignKey("DiseaseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("CliniKa.Domain.Entities.Patient", "Patient")
                         .WithMany("PatientDiseases")
@@ -1102,6 +1176,8 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("CliniKa.Domain.Entities.Patient", b =>
                 {
                     b.Navigation("ActiveMedications");
+
+                    b.Navigation("ChatSessions");
 
                     b.Navigation("ClinicalSessions");
 

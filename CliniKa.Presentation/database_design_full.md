@@ -69,8 +69,10 @@ erDiagram
         datetime2 UploadedAt
     }
     PatientDiseases {
+        int Id PK
         int PatientId FK
         int DiseaseId FK
+        nvarchar RawDiseaseName
         date DiagnosedDate
         int SourceSessionId FK
     }
@@ -80,8 +82,10 @@ erDiagram
         nvarchar DiseaseName
     }
     PatientAllergies {
+        int Id PK
         int PatientId FK
         int AllergyId FK
+        nvarchar RawAllergenName
         nvarchar Severity
         int SourceSessionId FK
     }
@@ -242,11 +246,12 @@ CREATE TABLE Diseases (
 -- 7. جدول أمراض المريض التراكمي (الخطوة 12 + الخطوة 24)
 -- يخدم: قراءة التاريخ المرضي في كل زيارة، وتراكم الأمراض الجديدة بعد تأكيد الدكتور
 CREATE TABLE PatientDiseases (
-    PatientId       INT     NOT NULL FOREIGN KEY REFERENCES Patients(Id) ON DELETE CASCADE,
-    DiseaseId       INT     NOT NULL FOREIGN KEY REFERENCES Diseases(Id) ON DELETE CASCADE,
-    DiagnosedDate   DATE    NOT NULL DEFAULT CAST(GETDATE() AS DATE),
-    SourceSessionId INT     FOREIGN KEY REFERENCES ClinicalSessions(Id),   -- من أي زيارة ظهر هذا المرض
-    PRIMARY KEY (PatientId, DiseaseId)
+    Id              INT IDENTITY(1,1)   PRIMARY KEY,
+    PatientId       INT                 NOT NULL FOREIGN KEY REFERENCES Patients(Id) ON DELETE CASCADE,
+    DiseaseId       INT                 NULL FOREIGN KEY REFERENCES Diseases(Id) ON DELETE CASCADE,
+    RawDiseaseName  NVARCHAR(200)       NULL,
+    DiagnosedDate   DATE                NOT NULL DEFAULT CAST(GETDATE() AS DATE),
+    SourceSessionId INT                 FOREIGN KEY REFERENCES ClinicalSessions(Id)   -- من أي زيارة ظهر هذا المرض
 );
 
 -- 8. جدول الحساسية المرجعي
@@ -258,11 +263,12 @@ CREATE TABLE Allergies (
 
 -- 9. جدول حساسيات المريض التراكمي (الخطوة 12 + الخطوة 24)
 CREATE TABLE PatientAllergies (
-    PatientId       INT             NOT NULL FOREIGN KEY REFERENCES Patients(Id) ON DELETE CASCADE,
-    AllergyId       INT             NOT NULL FOREIGN KEY REFERENCES Allergies(Id) ON DELETE CASCADE,
-    Severity        NVARCHAR(20)    CHECK (Severity IN ('Mild', 'Moderate', 'Severe')),
-    SourceSessionId INT             FOREIGN KEY REFERENCES ClinicalSessions(Id),
-    PRIMARY KEY (PatientId, AllergyId)
+    Id              INT IDENTITY(1,1)   PRIMARY KEY,
+    PatientId       INT                 NOT NULL FOREIGN KEY REFERENCES Patients(Id) ON DELETE CASCADE,
+    AllergyId       INT                 NULL FOREIGN KEY REFERENCES Allergies(Id) ON DELETE CASCADE,
+    RawAllergenName NVARCHAR(200)       NULL,
+    Severity        NVARCHAR(20)        CHECK (Severity IN ('Mild', 'Moderate', 'Severe')),
+    SourceSessionId INT                 FOREIGN KEY REFERENCES ClinicalSessions(Id)
 );
 
 -- 10. جدول الأدوية النشطة التراكمي (الخطوة 12 + الخطوة 24)

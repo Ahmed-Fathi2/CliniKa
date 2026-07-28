@@ -10,7 +10,10 @@ namespace CliniKa.Infrastructure.Persistence.Configurations
         {
             builder.ToTable("PatientDiseases");
 
-            builder.HasKey(pd => new { pd.PatientId, pd.DiseaseId });
+            builder.HasKey(pd => pd.Id);
+
+            builder.Property(pd => pd.RawDiseaseName)
+                .HasMaxLength(200);
 
             builder.Property(pd => pd.DiagnosedDate)
                 .HasColumnType("DATE")
@@ -30,7 +33,8 @@ namespace CliniKa.Infrastructure.Persistence.Configurations
             builder.HasOne(pd => pd.Disease)
                 .WithMany(d => d.PatientDiseases)
                 .HasForeignKey(pd => pd.DiseaseId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired(false);
 
             builder.HasOne(pd => pd.SourceSession)
                 .WithMany(s => s.PatientDiseases)
