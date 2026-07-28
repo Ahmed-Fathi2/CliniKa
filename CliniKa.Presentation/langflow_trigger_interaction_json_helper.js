@@ -1,8 +1,8 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const https = require('https');
 
 const url = process.argv[2];
-const filePath = process.argv[3]; 
+const filePath = process.argv[3];
 
 const payload = fs.readFileSync(filePath, 'utf8');
 

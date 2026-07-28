@@ -17,27 +17,8 @@ namespace CliniKa.Presentation.Controllers
         }
 
         /// <summary>
-        /// Creates a new chat session for a patient.
-        /// The backend fetches all patient data (medications, diseases, allergies)
-        /// and builds the system prompt — Angular only sends the patientId.
-        /// </summary>
-        [HttpPost("start")]
-        public async Task<IActionResult> StartChat([FromBody] StartChatRequestDto dto)
-        {
-            var result = await _chatService.StartChatAsync(dto.PatientId);
-
-            if (result.IsSuccess)
-                return Ok(result);
-
-            if (result.Status == ResultStatus.NotFound)
-                return NotFound(result);
-
-            return BadRequest(result);
-        }
-
-        /// <summary>
         /// Sends a user message and returns the AI response.
-        /// The backend manages the full conversation history — Angular only sends the message text.
+        /// If ChatSessionId is null or 0, a new chat session is created on the fly.
         /// </summary>
         [HttpPost("send")]
         public async Task<IActionResult> SendMessage([FromBody] SendMessageRequestDto dto)
@@ -47,7 +28,7 @@ namespace CliniKa.Presentation.Controllers
                 return BadRequest(GeneralResult.Failure("Message cannot be empty."));
             }
 
-            var result = await _chatService.SendMessageAsync(dto.ChatSessionId, dto.Message);
+            var result = await _chatService.SendMessageAsync(dto.PatientId, dto.ChatSessionId, dto.Message);
 
             if (result.IsSuccess)
                 return Ok(result);

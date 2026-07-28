@@ -20,75 +20,65 @@ namespace CliniKa.Infrastructure.Services
         }
 
         /// <inheritdoc />
-        public async Task<GeneralResult<StartChatResponseDto>> StartChatAsync(int patientId)
+        public async Task<GeneralResult<SendMessageResponseDto>> SendMessageAsync(int patientId, int? chatSessionId, string message)
         {
-            // 1. Fetch patient with all medical data (using the existing repository method)
-            var patient = await _unitOfWork.Patient.GetPatientWithIncludesAsync(patientId);
-            if (patient == null)
+            ChatSession chatSession;
+            List<ChatMessageDto> messages;
+
+            if (!chatSessionId.HasValue || chatSessionId.Value == 0)
             {
-                return GeneralResult<StartChatResponseDto>.NotFound("Patient not found.");
+                // 1. Fetch patient with all medical data
+                var patient = await _unitOfWork.Patient.GetPatientWithIncludesAsync(patientId);
+                if (patient == null)
+                {
+                    return GeneralResult<SendMessageResponseDto>.NotFound("Patient not found.");
+                }
+
+                // 2. Build system prompt from patient data
+                var systemPrompt = BuildSystemPrompt(patient);
+
+                // 3. Create title directly from initial user message
+                string initialTitle = message.Length > 50 ? message.Substring(0, 50) + "..." : message;
+
+                chatSession = new ChatSession
+                {
+                    PatientId = patientId,
+                    Title = initialTitle,
+                    SystemPrompt = systemPrompt,
+                    MessagesJson = "[]",
+                    CreatedAt = DateTime.UtcNow,
+                    LastMessageAt = DateTime.UtcNow,
+                    IsActive = true
+                };
+
+                _unitOfWork.ChatSessions.Add(chatSession);
+                messages = new List<ChatMessageDto>();
+            }
+            else
+            {
+                // Load existing chat session
+                var existingSession = await _unitOfWork.ChatSessions.GetAsync(
+                    c => c.Id == chatSessionId.Value && c.IsActive,
+                    trackChanges: true);
+
+                if (existingSession == null)
+                {
+                    return GeneralResult<SendMessageResponseDto>.NotFound("Chat session not found or is no longer active.");
+                }
+
+                chatSession = existingSession;
+                messages = DeserializeMessages(chatSession.MessagesJson);
             }
 
-            // 2. Build the system prompt from patient data
-            var systemPrompt = BuildSystemPrompt(patient);
-
-            // 3. Create a new ChatSession
-            var chatSession = new ChatSession
-            {
-                PatientId = patientId,
-                Title = "New Conversation",
-                SystemPrompt = systemPrompt,
-                MessagesJson = "[]",
-                CreatedAt = DateTime.UtcNow,
-                LastMessageAt = DateTime.UtcNow,
-                IsActive = true
-            };
-
-            _unitOfWork.ChatSessions.Add(chatSession);
-            await _unitOfWork.SaveChangesAsync();
-
-            Console.WriteLine($"[ChatService] Created ChatSession {chatSession.Id} for Patient {patientId}");
-
-            return GeneralResult<StartChatResponseDto>.Success(new StartChatResponseDto
-            {
-                ChatSessionId = chatSession.Id,
-                WelcomeMessage = $"Hello! I'm your AI health assistant. I have access to your medical profile and can help answer questions about your health. How can I help you today?"
-            });
-        }
-
-        /// <inheritdoc />
-        public async Task<GeneralResult<SendMessageResponseDto>> SendMessageAsync(int chatSessionId, string message)
-        {
-            // 1. Load the chat session
-            var chatSession = await _unitOfWork.ChatSessions.GetAsync(
-                c => c.Id == chatSessionId && c.IsActive,
-                trackChanges: true);
-
-            if (chatSession == null)
-            {
-                return GeneralResult<SendMessageResponseDto>.NotFound("Chat session not found or is no longer active.");
-            }
-
-            // 2. Deserialize existing message history
-            var messages = DeserializeMessages(chatSession.MessagesJson);
-
-            // 3. Auto-generate title from first user message
-            if (chatSession.Title == "New Conversation" && !messages.Any(m => m.Role == "user"))
-            {
-                chatSession.Title = message.Length > 50
-                    ? message.Substring(0, 50) + "..."
-                    : message;
-            }
-
-            // 4. Build payload for ActivePieces (Messages contains past history ONLY)
+            // Build payload for AI flow (Sanitize history to guarantee strict user/assistant role alternation)
             var flowPayload = new ChatFlowPayloadDto
             {
                 SystemPrompt = chatSession.SystemPrompt,
                 NewQuestion = message,
-                Messages = messages
+                Messages = SanitizeChatHistoryForFlow(messages)
             };
 
-            // 5. Append the new user message to local history array
+            // Append the new user message to local history array
             var userMessage = new ChatMessageDto
             {
                 Role = "user",
@@ -97,14 +87,14 @@ namespace CliniKa.Infrastructure.Services
             };
             messages.Add(userMessage);
 
-            // 6. Call ActivePieces chatbot flow
+            // Call ActivePieces chatbot flow
             var flowResult = await _langFlowService.TriggerChatbotFlowAsync(flowPayload);
             if (!flowResult.IsSuccess || string.IsNullOrEmpty(flowResult.Data))
             {
                 return GeneralResult<SendMessageResponseDto>.Failure(flowResult.Message ?? "Failed to get a response from the AI service.");
             }
 
-            // 7. Append AI response to history
+            // Append AI response to history
             string aiReply = flowResult.Data;
             var assistantMessage = new ChatMessageDto
             {
@@ -114,7 +104,7 @@ namespace CliniKa.Infrastructure.Services
             };
             messages.Add(assistantMessage);
 
-            // 8. Save updated history to DB
+            // Save updated history to DB
             chatSession.MessagesJson = SerializeMessages(messages);
             chatSession.LastMessageAt = DateTime.UtcNow;
 
@@ -122,6 +112,7 @@ namespace CliniKa.Infrastructure.Services
 
             return GeneralResult<SendMessageResponseDto>.Success(new SendMessageResponseDto
             {
+                ChatSessionId = chatSession.Id,
                 Reply = aiReply,
                 Timestamp = assistantMessage.Timestamp
             });
@@ -286,6 +277,36 @@ namespace CliniKa.Infrastructure.Services
         private static string SerializeMessages(List<ChatMessageDto> messages)
         {
             return JsonSerializer.Serialize(messages);
+        }
+
+        /// <summary>
+        /// Sanitizes history sent to HuggingFace/Transformers LLM endpoints to enforce strict role alternation (user/assistant).
+        /// Trims any incomplete trailing user messages so that newQuestion ('user') can be cleanly appended by the Python server.
+        /// </summary>
+        private static List<ChatMessageDto> SanitizeChatHistoryForFlow(List<ChatMessageDto> rawMessages)
+        {
+            if (rawMessages == null || !rawMessages.Any())
+                return new List<ChatMessageDto>();
+
+            var cleanList = new List<ChatMessageDto>();
+            string expectedRole = "user";
+
+            foreach (var msg in rawMessages)
+            {
+                if (string.Equals(msg.Role, expectedRole, StringComparison.OrdinalIgnoreCase))
+                {
+                    cleanList.Add(msg);
+                    expectedRole = expectedRole.Equals("user", StringComparison.OrdinalIgnoreCase) ? "assistant" : "user";
+                }
+            }
+
+            // Ensure history payload ends with 'assistant' so Python endpoint can append 'newQuestion' ('user') without back-to-back user roles
+            if (cleanList.Any() && cleanList.Last().Role.Equals("user", StringComparison.OrdinalIgnoreCase))
+            {
+                cleanList.RemoveAt(cleanList.Count - 1);
+            }
+
+            return cleanList;
         }
 
         #endregion

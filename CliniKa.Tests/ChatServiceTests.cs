@@ -35,13 +35,16 @@ namespace CliniKa.Tests
             _chatService = new ChatService(_mockUnitOfWork.Object, _mockLangFlowService.Object);
         }
 
-        #region StartChatAsync Tests
+        #region SendMessageAsync Tests
 
         [Fact]
-        public async Task StartChatAsync_ShouldReturnSuccess_WhenPatientExists()
+        public async Task SendMessageAsync_ShouldCreateNewSessionAndReturnSuccess_WhenChatSessionIdIsNull()
         {
             // Arrange
             int patientId = 1;
+            string userQuestion = "What are the side effects of Metformin?";
+            string aiReply = "Metformin can cause nausea or upset stomach.";
+
             var patient = new Patient
             {
                 Id = patientId,
@@ -60,22 +63,29 @@ namespace CliniKa.Tests
             _mockPatientRepo.Setup(p => p.GetPatientWithIncludesAsync(patientId))
                 .ReturnsAsync(patient);
 
+            _mockLangFlowService.Setup(l => l.TriggerChatbotFlowAsync(It.IsAny<ChatFlowPayloadDto>()))
+                .ReturnsAsync(GeneralResult<string>.Success(aiReply, "Success"));
+
             _mockUnitOfWork.Setup(u => u.SaveChangesAsync())
                 .ReturnsAsync(1);
 
             // Act
-            var result = await _chatService.StartChatAsync(patientId);
+            var result = await _chatService.SendMessageAsync(patientId, null, userQuestion);
 
             // Assert
             Assert.True(result.IsSuccess);
             Assert.NotNull(result.Data);
-            Assert.False(string.IsNullOrEmpty(result.Data.WelcomeMessage));
-            _mockChatSessionRepo.Verify(c => c.Add(It.Is<ChatSession>(s => s.PatientId == patientId)), Times.Once);
+            Assert.Equal(aiReply, result.Data.Reply);
+            _mockChatSessionRepo.Verify(c => c.Add(It.Is<ChatSession>(s => 
+                s.PatientId == patientId && 
+                s.Title == userQuestion &&
+                s.SystemPrompt.Contains("John Doe")
+            )), Times.Once);
             _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
         }
 
         [Fact]
-        public async Task StartChatAsync_ShouldReturnNotFound_WhenPatientDoesNotExist()
+        public async Task SendMessageAsync_ShouldReturnNotFound_WhenNewSessionAndPatientDoesNotExist()
         {
             // Arrange
             int patientId = 999;
@@ -83,21 +93,18 @@ namespace CliniKa.Tests
                 .ReturnsAsync((Patient?)null);
 
             // Act
-            var result = await _chatService.StartChatAsync(patientId);
+            var result = await _chatService.SendMessageAsync(patientId, null, "Hello");
 
             // Assert
             Assert.False(result.IsSuccess);
             Assert.Equal(ResultStatus.NotFound, result.Status);
         }
 
-        #endregion
-
-        #region SendMessageAsync Tests
-
         [Fact]
         public async Task SendMessageAsync_ShouldReturnSuccess_WhenSessionExistsAndFlowSucceeds()
         {
             // Arrange
+            int patientId = 1;
             int sessionId = 10;
             string userQuestion = "What are the side effects of Metformin?";
             string aiReply = "Metformin can cause nausea or upset stomach.";
@@ -105,8 +112,8 @@ namespace CliniKa.Tests
             var chatSession = new ChatSession
             {
                 Id = sessionId,
-                PatientId = 1,
-                Title = "New Conversation",
+                PatientId = patientId,
+                Title = "Metformin Question",
                 SystemPrompt = "Patient: John Doe, Active Meds: Metformin",
                 MessagesJson = "[]",
                 IsActive = true
@@ -125,7 +132,7 @@ namespace CliniKa.Tests
                 .ReturnsAsync(1);
 
             // Act
-            var result = await _chatService.SendMessageAsync(sessionId, userQuestion);
+            var result = await _chatService.SendMessageAsync(patientId, sessionId, userQuestion);
 
             // Assert
             Assert.True(result.IsSuccess);
@@ -133,12 +140,11 @@ namespace CliniKa.Tests
             Assert.Equal(aiReply, result.Data.Reply);
             Assert.Contains(userQuestion, chatSession.MessagesJson);
             Assert.Contains(aiReply, chatSession.MessagesJson);
-            Assert.Equal(userQuestion, chatSession.Title); // Auto-title set from first question
             _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
         }
 
         [Fact]
-        public async Task SendMessageAsync_ShouldReturnNotFound_WhenSessionDoesNotExist()
+        public async Task SendMessageAsync_ShouldReturnNotFound_WhenExistingSessionDoesNotExist()
         {
             // Arrange
             _mockChatSessionRepo.Setup(r => r.GetAsync(
@@ -148,7 +154,7 @@ namespace CliniKa.Tests
             )).ReturnsAsync((ChatSession?)null);
 
             // Act
-            var result = await _chatService.SendMessageAsync(10, "Hello");
+            var result = await _chatService.SendMessageAsync(1, 10, "Hello");
 
             // Assert
             Assert.False(result.IsSuccess);
@@ -159,11 +165,12 @@ namespace CliniKa.Tests
         public async Task SendMessageAsync_ShouldReturnFailure_WhenFlowFails()
         {
             // Arrange
+            int patientId = 1;
             int sessionId = 10;
             var chatSession = new ChatSession
             {
                 Id = sessionId,
-                PatientId = 1,
+                PatientId = patientId,
                 Title = "General Chat",
                 SystemPrompt = "System Prompt",
                 MessagesJson = "[]",
@@ -180,7 +187,7 @@ namespace CliniKa.Tests
                 .ReturnsAsync(GeneralResult<string>.Failure("AI Service Unavailable"));
 
             // Act
-            var result = await _chatService.SendMessageAsync(sessionId, "Hello");
+            var result = await _chatService.SendMessageAsync(patientId, sessionId, "Hello");
 
             // Assert
             Assert.False(result.IsSuccess);
@@ -232,7 +239,7 @@ namespace CliniKa.Tests
             Assert.NotNull(result.Data);
             Assert.Single(result.Data);
             Assert.Equal("Hi", result.Data[0].Content);
-            Assert.Contains("Jane Doe", chatSession.SystemPrompt); // Refreshed prompt contains patient name
+            Assert.Contains("Jane Doe", chatSession.SystemPrompt);
             _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
         }
 
@@ -309,7 +316,7 @@ namespace CliniKa.Tests
         }
 
         [Fact]
-        public async Task StartChatAsync_ShouldBuildSystemPromptCorrectly_WhenPatientHasNoMedicalRecords()
+        public async Task SendMessageAsync_ShouldBuildSystemPromptCorrectly_WhenPatientHasNoMedicalRecords()
         {
             // Arrange
             int patientId = 2;
@@ -325,11 +332,14 @@ namespace CliniKa.Tests
             _mockPatientRepo.Setup(p => p.GetPatientWithIncludesAsync(patientId))
                 .ReturnsAsync(patient);
 
+            _mockLangFlowService.Setup(l => l.TriggerChatbotFlowAsync(It.IsAny<ChatFlowPayloadDto>()))
+                .ReturnsAsync(GeneralResult<string>.Success("AI response", "Success"));
+
             _mockUnitOfWork.Setup(u => u.SaveChangesAsync())
                 .ReturnsAsync(1);
 
             // Act
-            var result = await _chatService.StartChatAsync(patientId);
+            var result = await _chatService.SendMessageAsync(patientId, null, "Hello doctor");
 
             // Assert
             Assert.True(result.IsSuccess);
@@ -344,6 +354,7 @@ namespace CliniKa.Tests
         public async Task SendMessageAsync_ShouldNotOverwriteTitle_WhenTitleIsAlreadyCustomized()
         {
             // Arrange
+            int patientId = 1;
             int sessionId = 20;
             string existingTitle = "Existing Chat Title";
             string userQuestion = "Follow up question";
@@ -352,7 +363,7 @@ namespace CliniKa.Tests
             var chatSession = new ChatSession
             {
                 Id = sessionId,
-                PatientId = 1,
+                PatientId = patientId,
                 Title = existingTitle,
                 SystemPrompt = "System Prompt",
                 MessagesJson = "[{\"role\":\"user\",\"content\":\"q1\"},{\"role\":\"assistant\",\"content\":\"a1\"}]",
@@ -372,11 +383,11 @@ namespace CliniKa.Tests
                 .ReturnsAsync(1);
 
             // Act
-            var result = await _chatService.SendMessageAsync(sessionId, userQuestion);
+            var result = await _chatService.SendMessageAsync(patientId, sessionId, userQuestion);
 
             // Assert
             Assert.True(result.IsSuccess);
-            Assert.Equal(existingTitle, chatSession.Title); // Title remains unchanged!
+            Assert.Equal(existingTitle, chatSession.Title);
         }
 
         [Fact]

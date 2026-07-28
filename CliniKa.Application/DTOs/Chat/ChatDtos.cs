@@ -4,25 +4,16 @@ using System.Text.Json.Serialization;
 
 namespace CliniKa.Application.DTOs.Chat
 {
-    public class StartChatRequestDto
-    {
-        public int PatientId { get; set; }
-    }
-
-    public class StartChatResponseDto
-    {
-        public int ChatSessionId { get; set; }
-        public string WelcomeMessage { get; set; } = string.Empty;
-    }
-
     public class SendMessageRequestDto
     {
-        public int ChatSessionId { get; set; }
+        public int PatientId { get; set; }
+        public int? ChatSessionId { get; set; }
         public string Message { get; set; } = string.Empty;
     }
 
     public class SendMessageResponseDto
     {
+        public int ChatSessionId { get; set; }
         public string Reply { get; set; } = string.Empty;
         public DateTime Timestamp { get; set; }
     }

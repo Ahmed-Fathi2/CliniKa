@@ -13,9 +13,10 @@ namespace CliniKa.Infrastructure.Services
         private const string WebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/aN5md3tHu7izwg01SvZ3C";
         private const string DrugInteractionWebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/irtY6rMKe4Mb1fVjwTuGv/sync";
         // TODO: Replace with your actual ActivePieces chatbot flow webhook URL
-        private const string ChatbotWebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/YOUR_CHATBOT_FLOW_ID/sync";
+        private const string ChatbotWebhookUrl = "https://matrimony-valiant-unedited.ngrok-free.dev/analyze";
         private const string HelperScriptName = "langflow_helper.js";
         private const string HelperInteractionsScriptName = "langflow_trigger_interaction_json_helper.js";
+        private const string ChatbotHelperScriptName = "chatbot_flow_json_helper.js";
 
         public LangFlowService()
         {
@@ -233,18 +234,18 @@ namespace CliniKa.Infrastructure.Services
         public async Task<GeneralResult<string>> TriggerChatbotFlowAsync(ChatFlowPayloadDto payload)
         {
             var tempFilePath = Path.Combine(Path.GetTempPath(), $"chat_payload_{Guid.NewGuid()}.json");
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(240));
 
             try
             {
                 Console.WriteLine($"[LangFlowService] Triggering Chatbot Flow...");
 
                 var jsonPayload = JsonSerializer.Serialize(payload);
-                await File.WriteAllTextAsync(tempFilePath, jsonPayload, cts.Token);
+                await File.WriteAllTextAsync(tempFilePath, jsonPayload, new System.Text.UTF8Encoding(false), cts.Token);
 
-                var scriptPath = ResolveHelperScriptPath(HelperInteractionsScriptName);
+                var scriptPath = ResolveHelperScriptPath(ChatbotHelperScriptName);
                 if (scriptPath == null)
-                    return GeneralResult<string>.Failure($"Could not find {HelperInteractionsScriptName}.");
+                    return GeneralResult<string>.Failure($"Could not find {ChatbotHelperScriptName}.");
 
                 var startInfo = new ProcessStartInfo
                 {
@@ -283,6 +284,8 @@ namespace CliniKa.Infrastructure.Services
                         using var replyDoc = JsonDocument.Parse(bodyString);
                         if (replyDoc.RootElement.TryGetProperty("reply", out var replyProp))
                             return GeneralResult<string>.Success(replyProp.GetString() ?? bodyString, "Chatbot responded successfully.");
+                        if (replyDoc.RootElement.TryGetProperty("answer", out var answerProp))
+                            return GeneralResult<string>.Success(answerProp.GetString() ?? bodyString, "Chatbot responded successfully.");
                         if (replyDoc.RootElement.TryGetProperty("response", out var responseProp))
                             return GeneralResult<string>.Success(responseProp.GetString() ?? bodyString, "Chatbot responded successfully.");
                         if (replyDoc.RootElement.TryGetProperty("message", out var messageProp))

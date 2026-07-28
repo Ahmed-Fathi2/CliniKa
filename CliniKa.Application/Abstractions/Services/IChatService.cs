@@ -7,16 +7,10 @@ namespace CliniKa.Application.Abstractions.Services
     public interface IChatService
     {
         /// <summary>
-        /// Creates a new chat session for a patient.
-        /// Fetches patient data (medications, diseases, allergies) and builds the system prompt.
-        /// </summary>
-        Task<GeneralResult<StartChatResponseDto>> StartChatAsync(int patientId);
-
-        /// <summary>
         /// Sends a user message, triggers the AI flow with full conversation history,
-        /// and returns the AI response.
+        /// and returns the AI response. Creates the ChatSession in DB if chatSessionId is null or 0.
         /// </summary>
-        Task<GeneralResult<SendMessageResponseDto>> SendMessageAsync(int chatSessionId, string message);
+        Task<GeneralResult<SendMessageResponseDto>> SendMessageAsync(int patientId, int? chatSessionId, string message);
 
         /// <summary>
         /// Returns the full message history for a chat session.
