@@ -21,6 +21,10 @@ namespace CliniKa.Infrastructure.Repositories
 
         public IChatSessionRepository ChatSessions { get; }
 
+        public IDiseaseRepository Diseases { get; }
+
+        public IAllergyRepository Allergies { get; }
+
         public UnitOfWork(
             AppDbContext context,
             IActiveMedicationsRepository activeMedications,
@@ -29,7 +33,9 @@ namespace CliniKa.Infrastructure.Repositories
             IPrescribedMedicationsRepository prescribedMedications,
             IDoctorRepository doctors,
             ISessionAIReportsRepository sessionAIReports,
-            IChatSessionRepository chatSessions)
+            IChatSessionRepository chatSessions,
+            IDiseaseRepository diseases,
+            IAllergyRepository allergies)
         {
             _context = context;
             ActiveMedications = activeMedications;
@@ -39,6 +45,8 @@ namespace CliniKa.Infrastructure.Repositories
             Doctors = doctors;
             SessionAIReports = sessionAIReports;
             ChatSessions = chatSessions;
+            Diseases = diseases;
+            Allergies = allergies;
         }
 
         public async Task<int> SaveChangesAsync()
