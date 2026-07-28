@@ -203,10 +203,10 @@ namespace CliniKa.Infrastructure.Services
             sb.AppendLine($"Name: {patient.FullName}");
             if (!string.IsNullOrEmpty(patient.Gender))
                 sb.AppendLine($"Gender: {patient.Gender}");
-            if (patient.DateOfBirth != default)
+            if (patient.DateOfBirth.HasValue && patient.DateOfBirth.Value != default)
             {
-                var age = DateTime.UtcNow.Year - patient.DateOfBirth.Year;
-                if (DateTime.UtcNow.DayOfYear < patient.DateOfBirth.DayOfYear) age--;
+                var age = DateTime.UtcNow.Year - patient.DateOfBirth.Value.Year;
+                if (DateTime.UtcNow.DayOfYear < patient.DateOfBirth.Value.DayOfYear) age--;
                 sb.AppendLine($"Age: {age} years");
             }
             if (!string.IsNullOrEmpty(patient.BloodType))
@@ -242,7 +242,7 @@ namespace CliniKa.Infrastructure.Services
             {
                 foreach (var pd in patient.PatientDiseases)
                 {
-                    var diseaseName = pd.Disease?.DiseaseName ?? "Unknown";
+                    var diseaseName = pd.Disease?.DiseaseName ?? pd.RawDiseaseName ?? "Unknown";
                     sb.AppendLine($"- {diseaseName} (diagnosed {pd.DiagnosedDate:yyyy-MM-dd})");
                 }
             }
@@ -258,7 +258,7 @@ namespace CliniKa.Infrastructure.Services
             {
                 foreach (var pa in patient.PatientAllergies)
                 {
-                    var allergenName = pa.Allergy?.AllergenName ?? "Unknown";
+                    var allergenName = pa.Allergy?.AllergenName ?? pa.RawAllergenName ?? "Unknown";
                     var severity = !string.IsNullOrEmpty(pa.Severity) ? $" (Severity: {pa.Severity})" : "";
                     sb.AppendLine($"- {allergenName}{severity}");
                 }

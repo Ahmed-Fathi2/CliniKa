@@ -10,6 +10,8 @@ using System.Text;
 using CliniKa.Application.Abstractions.Authentication;
 using CliniKa.Application.Abstractions.Services;
 using CliniKa.Application.DTOs.Authentication;
+using CliniKa.Domain.Entities;
+using CliniKa.Domain.Repositories;
 using CliniKa.Infrastructure.Persistence.Identity;
 
 namespace CliniKa.Infrastructure.Services
@@ -28,6 +30,7 @@ namespace CliniKa.Infrastructure.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthService> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IUnitOfWork _unitOfWork;
 
         public AuthService(
             UserManager<ApplicationUser> userManager,
@@ -41,7 +44,8 @@ namespace CliniKa.Infrastructure.Services
             IEmailSender emailSender,
             IConfiguration configuration,
             ILogger<AuthService> logger,
-            IHttpContextAccessor httpContextAccessor
+            IHttpContextAccessor httpContextAccessor,
+            IUnitOfWork unitOfWork
             )
         {
             _userManager = userManager;
@@ -56,6 +60,7 @@ namespace CliniKa.Infrastructure.Services
             _configuration = configuration;
             _logger = logger;
             _httpContextAccessor = httpContextAccessor;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<GeneralResult> ConfirmEmailAsync(ConfirmEmailDto confirmEmailDto)
@@ -169,6 +174,16 @@ namespace CliniKa.Infrastructure.Services
                 var message = string.Join(", ", createRoleResult.Errors.Select(e => e.Description));
                 return GeneralResult<RegisterResponse>.Failure($"User registration failed: {message}");
             }
+
+            // Create Patient row for the registered patient user
+            var patient = new Patient
+            {
+                UserId = user.Id,
+                FullName = $"{registerRequest.FirstName} {registerRequest.LastName}".Trim(),
+                CreatedAt = DateTime.UtcNow
+            };
+            _unitOfWork.Patient.Add(patient);
+            await _unitOfWork.SaveChangesAsync();
 
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             //var baseUrl = _configuration["App:BaseUrl"];
