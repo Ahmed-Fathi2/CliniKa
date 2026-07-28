@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using CliniKa.Application.Validators;
 using CliniKa.Application.DTOs.Authentication;
+using CliniKa.Application.DTOs.Patient;
 using CliniKa.Application.DTOs.User;
 using CliniKa.Application.DTOs.Role;
 
@@ -22,6 +23,10 @@ namespace CliniKa.Application.Extensions
             services.AddScoped<IValidator<ResetPasswordRequest>, ResetPasswordRequestValidator>();
             services.AddScoped<IValidator<CreateUserRequest>, CreateUserRequestValidator>();
             services.AddScoped<IValidator<CreateRoleRequest>, CreateRoleRequestValidator>();
+            services.AddScoped<IValidator<AddMedicalInfoRequest>, AddMedicalInfoRequestValidator>();
+            services.AddScoped<IValidator<AddMedicationRequest>, AddMedicationRequestValidator>();
+            services.AddScoped<IValidator<AddDiseaseRequest>, AddDiseaseRequestValidator>();
+            services.AddScoped<IValidator<AddAllergyRequest>, AddAllergyRequestValidator>();
 
             // Mapster configuration
             var config = TypeAdapterConfig.GlobalSettings;
