@@ -97,6 +97,8 @@ namespace CliniKa.Infrastructure.Extensions
             // is shared between the SSE endpoint (reader) and the callback (writer).
             services.AddSingleton<IDiagnosisNotificationService, SseNotificationService>();
             services.AddScoped<IPatientService, PatientService>();
+            services.AddScoped<IDiseaseService, DiseaseService>();
+            services.AddScoped<IAllergyService, AllergyService>();
 
             services.AddHttpContextAccessor();
             services.AddScoped<ICurrentUserService, CurrentUserService>();

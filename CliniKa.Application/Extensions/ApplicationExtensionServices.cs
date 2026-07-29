@@ -9,6 +9,9 @@ using CliniKa.Application.DTOs.Patient;
 using CliniKa.Application.DTOs.User;
 using CliniKa.Application.DTOs.Role;
 
+using CliniKa.Application.DTOs.Disease;
+using CliniKa.Application.DTOs.Allergy;
+
 namespace CliniKa.Application.Extensions
 {
     public static class ApplicationExtensionServices
@@ -27,6 +30,10 @@ namespace CliniKa.Application.Extensions
             services.AddScoped<IValidator<AddMedicationRequest>, AddMedicationRequestValidator>();
             services.AddScoped<IValidator<AddDiseaseRequest>, AddDiseaseRequestValidator>();
             services.AddScoped<IValidator<AddAllergyRequest>, AddAllergyRequestValidator>();
+            services.AddScoped<IValidator<CreateDiseaseRequest>, CreateDiseaseRequestValidator>();
+            services.AddScoped<IValidator<UpdateDiseaseRequest>, UpdateDiseaseRequestValidator>();
+            services.AddScoped<IValidator<CreateAllergyRequest>, CreateAllergyRequestValidator>();
+            services.AddScoped<IValidator<UpdateAllergyRequest>, UpdateAllergyRequestValidator>();
 
             // Mapster configuration
             var config = TypeAdapterConfig.GlobalSettings;
