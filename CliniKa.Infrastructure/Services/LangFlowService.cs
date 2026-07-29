@@ -13,7 +13,7 @@ namespace CliniKa.Infrastructure.Services
         private const string WebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/aN5md3tHu7izwg01SvZ3C";
         private const string DrugInteractionWebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/irtY6rMKe4Mb1fVjwTuGv/sync";
         // TODO: Replace with your actual ActivePieces chatbot flow webhook URL
-        private const string ChatbotWebhookUrl = "https://matrimony-valiant-unedited.ngrok-free.dev/analyze";
+        private const string ChatbotWebhookUrl = "https://matrimony-valiant-unedited.ngrok-free.dev/patient-chat";
         private const string HelperScriptName = "langflow_helper.js";
         private const string HelperInteractionsScriptName = "langflow_trigger_interaction_json_helper.js";
         private const string ChatbotHelperScriptName = "chatbot_flow_json_helper.js";
