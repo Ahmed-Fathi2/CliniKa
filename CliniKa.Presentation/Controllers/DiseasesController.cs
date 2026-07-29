@@ -41,7 +41,7 @@ namespace CliniKa.Presentation.Controllers
         }
 
         [HttpPost]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> CreateDisease([FromBody] CreateDiseaseRequest request)
         {
             var result = await _diseaseService.CreateDiseaseAsync(request);
@@ -57,7 +57,7 @@ namespace CliniKa.Presentation.Controllers
         }
 
         [HttpPut("{id:int}")]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> UpdateDisease([FromRoute] int id, [FromBody] UpdateDiseaseRequest request)
         {
             var result = await _diseaseService.UpdateDiseaseAsync(id, request);
@@ -77,7 +77,7 @@ namespace CliniKa.Presentation.Controllers
         }
 
         [HttpDelete("{id:int}")]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> DeleteDisease([FromRoute] int id)
         {
             var result = await _diseaseService.DeleteDiseaseAsync(id);

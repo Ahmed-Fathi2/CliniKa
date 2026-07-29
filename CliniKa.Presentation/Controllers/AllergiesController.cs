@@ -41,7 +41,7 @@ namespace CliniKa.Presentation.Controllers
         }
 
         [HttpPost]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> CreateAllergy([FromBody] CreateAllergyRequest request)
         {
             var result = await _allergyService.CreateAllergyAsync(request);
@@ -57,7 +57,7 @@ namespace CliniKa.Presentation.Controllers
         }
 
         [HttpPut("{id:int}")]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> UpdateAllergy([FromRoute] int id, [FromBody] UpdateAllergyRequest request)
         {
             var result = await _allergyService.UpdateAllergyAsync(id, request);
@@ -77,7 +77,7 @@ namespace CliniKa.Presentation.Controllers
         }
 
         [HttpDelete("{id:int}")]
-        //[Authorize]
+        [Authorize]
         public async Task<IActionResult> DeleteAllergy([FromRoute] int id)
         {
             var result = await _allergyService.DeleteAllergyAsync(id);
