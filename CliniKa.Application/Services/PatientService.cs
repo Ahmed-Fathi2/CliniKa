@@ -30,7 +30,7 @@ namespace CliniKa.Application.Services
         public async Task<GeneralResult<PatientReadDto>> GetPatientAsync(string query)
         {
             var patient = await _unitOfWork.Patient.GetAsync(
-                    filter: p => p.NationalId == query || p.FullName.Contains(query),
+                    filter: p => p.NationalId!.Contains(query) || p.FullName.Contains(query),
                     trackChanges: false
                 );
 
