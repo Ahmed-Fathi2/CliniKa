@@ -31,7 +31,8 @@ namespace CliniKa.Infrastructure.Extensions
 
             services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(
-                configuration.GetConnectionString("DefaultConnection")));
+                //configuration.GetConnectionString("DefaultConnection")));
+                configuration.GetConnectionString("MonsterConnectionString")));
 
             services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
             {

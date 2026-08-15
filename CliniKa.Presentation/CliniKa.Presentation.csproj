@@ -24,7 +24,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Content Include="langflow_helper.js">
+		<Content Include="dotnet restore.js">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 		<Content Include="langflow_trigger_interaction_json_helper.js">
