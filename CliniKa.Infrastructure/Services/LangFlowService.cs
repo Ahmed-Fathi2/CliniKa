@@ -10,7 +10,7 @@ namespace CliniKa.Infrastructure.Services
 {
     public class LangFlowService : ILangFlowService
     {
-        private const string WebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/aN5md3tHu7izwg01SvZ3C";
+        private const string WebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/p1CEPLFpP2z8qBAhZA48A";
         private const string DrugInteractionWebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/irtY6rMKe4Mb1fVjwTuGv/sync";
         // TODO: Replace with your actual ActivePieces chatbot flow webhook URL
         private const string ChatbotWebhookUrl = "https://matrimony-valiant-unedited.ngrok-free.dev/patient-chat";
