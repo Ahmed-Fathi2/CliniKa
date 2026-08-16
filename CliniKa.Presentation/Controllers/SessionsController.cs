@@ -2,12 +2,7 @@ using CliniKa.Application;
 using CliniKa.Application.Abstractions.Services;
 using CliniKa.Application.DTOs.Langflow;
 using CliniKa.Application.DTOs.Sessions;
-using CliniKa.Infrastructure.Services;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace CliniKa.Presentation.Controllers
 {
