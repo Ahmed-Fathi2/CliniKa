@@ -174,6 +174,12 @@ namespace CliniKa.Presentation.Controllers
             //    The frontend's EventSource will fire the 'error' event with
             //    readyState = CLOSED, which is the expected behavior.
         }
+
+        [HttpGet("Hello")]
+        public async Task<IActionResult> Click_Me()
+        {
+            return Ok("I am Clicked!");
+        }
     }
 }
 
