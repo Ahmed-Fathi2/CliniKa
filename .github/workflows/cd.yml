@@ -33,12 +33,41 @@ jobs:
       - name: Publish API
         run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -o ./publish
 
+      - name: Parse MonsterASP Publish Profile
+        shell: pwsh
+        env:
+          PUBLISH_PROFILE_XML: ${{ secrets.MONSTERASP_PUBLISH_PROFILE }}
+        run: |
+          if (-not $env:PUBLISH_PROFILE_XML) {
+            Write-Error "Secret 'MONSTERASP_PUBLISH_PROFILE' is missing or empty! Please add it in GitHub Settings -> Secrets -> Actions."
+            exit 1
+          }
+
+          [xml]$profile = $env:PUBLISH_PROFILE_XML
+          $publishNode = $profile.publishData.publishProfile[0]
+
+          # Extract Server, Username, and Password from Publish Profile XML
+          $rawServer = $publishNode.publishUrl -replace "^https?://", "" -replace "^ftp://", ""
+          $server = $rawServer.Split('/')[0]
+          $username = $publishNode.userName
+          $password = $publishNode.userPWD
+
+          # Mask the password in GitHub Actions logs
+          Write-Host "::add-mask::$password"
+
+          Write-Host "Successfully parsed Publish Profile: Connecting to $server with user $username"
+
+          # Export to GITHUB_ENV for the next deployment step
+          "FTP_SERVER=$server" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "FTP_USERNAME=$username" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "FTP_PASSWORD=$password" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Deploy to MonsterASP via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.MONSTERASP_FTP_SERVER }}
-          username: ${{ secrets.MONSTERASP_FTP_USERNAME }}
-          password: ${{ secrets.MONSTERASP_FTP_PASSWORD }}
+          server: ${{ env.FTP_SERVER }}
+          username: ${{ env.FTP_USERNAME }}
+          password: ${{ env.FTP_PASSWORD }}
           local-dir: ./publish/
           server-dir: /
           dangerous-clean-slate: false
