@@ -28,18 +28,18 @@ namespace CliniKa.Presentation.Controllers
             return BadRequest(result);
         }
 
-        [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginRequest loginRequest)
-        {
-            var result = await _authService.LoginAsync(loginRequest);
+        //[HttpPost("login")]
+        //public async Task<IActionResult> Login(LoginRequest loginRequest)
+        //{
+        //    var result = await _authService.LoginAsync(loginRequest);
 
-            if (result.IsSuccess)
-            {
-                return Ok(result);
-            }
+        //    if (result.IsSuccess)
+        //    {
+        //        return Ok(result);
+        //    }
 
-            return BadRequest(result);
-        }
+        //    return BadRequest(result);
+        //}
 
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterRequest registerRequest)
