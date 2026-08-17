@@ -4,7 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using CliniKa.Application;
 using CliniKa.Application.Abstractions.Services;
+using CliniKa.Application.Constants;
 using CliniKa.Application.DTOs.User;
+using CliniKa.Domain.Entities;
+using CliniKa.Domain.Repositories;
 using CliniKa.Infrastructure.Persistence.Identity;
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
@@ -18,17 +21,20 @@ namespace CliniKa.Infrastructure.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly IValidator<CreateUserRequest> _createUserValidator;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<UserService> _logger;
 
         public UserService(
             UserManager<ApplicationUser> userManager,
             RoleManager<ApplicationRole> roleManager,
             IValidator<CreateUserRequest> createUserValidator,
+            IUnitOfWork unitOfWork,
             ILogger<UserService> logger)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _createUserValidator = createUserValidator;
+            _unitOfWork = unitOfWork;
             _logger = logger;
         }
 
@@ -53,43 +59,71 @@ namespace CliniKa.Infrastructure.Services
                 return GeneralResult<UserDto>.Failure($"Role '{request.Role}' does not exist.");
             }
 
-            var user = new ApplicationUser
+            // Use a transaction to ensure both AspNetUsers and Doctors are created atomically
+            await _unitOfWork.BeginTransactionAsync();
+            try
             {
-                UserName = request.Email,
-                Email = request.Email,
-                FirstName = request.FirstName,
-                LastName = request.LastName,
-                PhoneNumber = request.PhoneNumber,
-                IsActive = true,
-                EmailConfirmed = true
-            };
+                var user = new ApplicationUser
+                {
+                    UserName = request.Email,
+                    Email = request.Email,
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    PhoneNumber = request.PhoneNumber,
+                    IsActive = true,
+                    EmailConfirmed = true
+                };
 
-            var createResult = await _userManager.CreateAsync(user, request.Password);
-            if (!createResult.Succeeded)
-            {
-                var message = string.Join(", ", createResult.Errors.Select(e => e.Description));
-                return GeneralResult<UserDto>.Failure($"User creation failed: {message}");
+                var createResult = await _userManager.CreateAsync(user, request.Password);
+                if (!createResult.Succeeded)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    var message = string.Join(", ", createResult.Errors.Select(e => e.Description));
+                    return GeneralResult<UserDto>.Failure($"User creation failed: {message}");
+                }
+
+                var addRoleResult = await _userManager.AddToRoleAsync(user, request.Role);
+                if (!addRoleResult.Succeeded)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    var message = string.Join(", ", addRoleResult.Errors.Select(e => e.Description));
+                    return GeneralResult<UserDto>.Failure($"Assigning role failed: {message}");
+                }
+
+                // If the role is Doctor, also create a Doctor record linked to this user
+                if (request.Role.Equals(RoleConstants.Doctor, StringComparison.OrdinalIgnoreCase))
+                {
+                    var doctor = new Doctor
+                    {
+                        FullName = $"{request.FirstName} {request.LastName}",
+                        UserId = user.Id
+                    };
+
+                    _unitOfWork.Doctors.Add(doctor);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                var userDto = new UserDto
+                {
+                    Id = user.Id,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    IsActive = user.IsActive,
+                    Roles = new[] { request.Role }
+                };
+
+                return GeneralResult<UserDto>.Success(userDto, "User created successfully.");
             }
-
-            var addRoleResult = await _userManager.AddToRoleAsync(user, request.Role);
-            if (!addRoleResult.Succeeded)
+            catch (Exception ex)
             {
-                var message = string.Join(", ", addRoleResult.Errors.Select(e => e.Description));
-                return GeneralResult<UserDto>.Failure($"Assigning role failed: {message}");
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Failed to create user with role {Role}", request.Role);
+                return GeneralResult<UserDto>.Failure("An unexpected error occurred while creating the user.");
             }
-
-            var userDto = new UserDto
-            {
-                Id = user.Id,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                PhoneNumber = user.PhoneNumber,
-                IsActive = user.IsActive,
-                Roles = new[] { request.Role }
-            };
-
-            return GeneralResult<UserDto>.Success(userDto, "User created successfully.");
         }
 
         public async Task<GeneralResult<IEnumerable<UserDto>>> GetAllUsersAsync()
