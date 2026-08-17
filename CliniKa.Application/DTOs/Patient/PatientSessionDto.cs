@@ -7,7 +7,6 @@ namespace CliniKa.Application.DTOs.Patient
         public int SessionId { get; set; }
         public DateTime VisitDate { get; set; }
         public string DoctorName { get; set; } = string.Empty;
-        public string? DoctorSpecialty { get; set; }
         public string Status { get; set; } = string.Empty;
         public string? FinalDiagnosis { get; set; }
     }

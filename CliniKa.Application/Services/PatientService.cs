@@ -313,7 +313,6 @@ namespace CliniKa.Application.Services
                     SessionId = cs.Id,
                     VisitDate = cs.VisitDate,
                     DoctorName = cs.Doctor != null ? cs.Doctor.FullName : string.Empty,
-                    DoctorSpecialty = cs.Doctor?.Specialty,
                     Status = cs.Status,
                     FinalDiagnosis = cs.FinalDiagnosis
                 }).OrderByDescending(s => s.VisitDate).ToList()
@@ -336,7 +335,6 @@ namespace CliniKa.Application.Services
                 SessionId = cs.Id,
                 VisitDate = cs.VisitDate,
                 DoctorName = cs.Doctor != null ? cs.Doctor.FullName : string.Empty,
-                DoctorSpecialty = cs.Doctor?.Specialty,
                 Status = cs.Status,
                 FinalDiagnosis = cs.FinalDiagnosis
             }).ToList();
@@ -365,7 +363,6 @@ namespace CliniKa.Application.Services
                 PatientName = session.Patient != null ? session.Patient.FullName : string.Empty,
                 DoctorId = session.DoctorId,
                 DoctorName = session.Doctor != null ? session.Doctor.FullName : string.Empty,
-                DoctorSpecialty = session.Doctor?.Specialty,
                 VisitDate = session.VisitDate,
                 Status = session.Status,
                 FinalizedAt = session.FinalizedAt,
