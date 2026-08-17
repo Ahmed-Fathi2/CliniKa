@@ -122,8 +122,6 @@ namespace CliniKa.Infrastructure.Persistence.Seeders
             {
                 Id = 1,
                 FullName = "Dr. Ahmad Fathi",
-                Specialty = "Cardiology",
-                LicenseNumber = "DOC12345",
                 UserId = doctorUserId,
                 CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
             });

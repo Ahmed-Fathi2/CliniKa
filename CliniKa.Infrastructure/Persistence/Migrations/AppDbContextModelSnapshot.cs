@@ -248,23 +248,11 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("LicenseNumber")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Specialty")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("LicenseNumber")
-                        .IsUnique();
 
                     b.HasIndex("UserId")
                         .IsUnique();
@@ -277,8 +265,6 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                             Id = 1,
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             FullName = "Dr. Ahmad Fathi",
-                            LicenseNumber = "DOC12345",
-                            Specialty = "Cardiology",
                             UserId = "d1b2c3d4-e5f6-7890-abcd-ef1234567890"
                         });
                 });
