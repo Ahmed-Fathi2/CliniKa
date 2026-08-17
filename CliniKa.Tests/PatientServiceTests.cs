@@ -415,7 +415,7 @@ namespace CliniKa.Tests
                         VisitDate = DateTime.UtcNow,
                         Status = "Completed",
                         FinalDiagnosis = "Acute Bronchitis",
-                        Doctor = new Doctor { FullName = "Dr. Ahmed", Specialty = "Pulmonology" }
+                        Doctor = new Doctor { FullName = "Dr. Ahmed" }
                     }
                 }
             };
@@ -438,7 +438,7 @@ namespace CliniKa.Tests
             Assert.Single(result.Data.Sessions);
             Assert.Equal(101, result.Data.Sessions.First().SessionId);
             Assert.Equal("Dr. Ahmed", result.Data.Sessions.First().DoctorName);
-            Assert.Equal("Pulmonology", result.Data.Sessions.First().DoctorSpecialty);
+
         }
 
         [Fact]
@@ -453,7 +453,7 @@ namespace CliniKa.Tests
                     VisitDate = DateTime.UtcNow,
                     Status = "Completed",
                     FinalDiagnosis = "Hypertension",
-                    Doctor = new Doctor { FullName = "Dr. Sara", Specialty = "Cardiology" }
+                    Doctor = new Doctor { FullName = "Dr. Sara" }
                 }
             };
 
@@ -472,7 +472,7 @@ namespace CliniKa.Tests
             Assert.Single(result.Data);
             Assert.Equal(201, result.Data.First().SessionId);
             Assert.Equal("Dr. Sara", result.Data.First().DoctorName);
-            Assert.Equal("Cardiology", result.Data.First().DoctorSpecialty);
+
         }
 
         [Fact]
@@ -486,7 +486,7 @@ namespace CliniKa.Tests
                 PatientId = 5,
                 Patient = new Patient { FullName = "Fatima Ali" },
                 DoctorId = 12,
-                Doctor = new Doctor { FullName = "Dr. Hassan", Specialty = "Dermatology" },
+                Doctor = new Doctor { FullName = "Dr. Hassan" },
                 VisitDate = DateTime.UtcNow,
                 Status = "Finalized",
                 FinalDiagnosis = "Contact Dermatitis",
