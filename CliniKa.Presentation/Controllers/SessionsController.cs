@@ -143,6 +143,24 @@ namespace CliniKa.Presentation.Controllers
         }
 
         /// <summary>
+        /// Retrieves the diagnosis result stored for a specific clinical session.
+        /// Reads the already processed AI result from the database without triggering the AI workflow again.
+        /// </summary>
+        [HttpGet("{sessionId:int}/diagnosis")]
+        public async Task<IActionResult> GetDiagnosis([FromRoute] int sessionId)
+        {
+            var result = await _sessionService.GetSessionDiagnosisAsync(sessionId);
+
+            if (result.IsSuccess)
+                return Ok(result);
+
+            if (result.Status == ResultStatus.NotFound)
+                return NotFound(result);
+
+            return BadRequest(result);
+        }
+
+        /// <summary>
         /// SSE endpoint — the frontend connects here after triggering a diagnosis.
         /// The connection stays open until the callback arrives, then sends
         /// an "diagnosis-complete" event and closes.

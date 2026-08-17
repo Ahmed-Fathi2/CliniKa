@@ -24,5 +24,6 @@ namespace CliniKa.Application.Abstractions.Services
 
         Task<GeneralResult<WorkflowSessionPayloadDto>> GetWorkflowPayloadAsync(int sessionId);
 
+        Task<GeneralResult<SessionDiagnosisResultDto>> GetSessionDiagnosisAsync(int sessionId);
     }
 }

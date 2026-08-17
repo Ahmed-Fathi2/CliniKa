@@ -261,6 +261,47 @@ namespace CliniKa.Application.Services
             return GeneralResult<WorkflowSessionPayloadDto>.Success(payload);
         }
 
+        public async Task<GeneralResult<SessionDiagnosisResultDto>> GetSessionDiagnosisAsync(int sessionId)
+        {
+            var session = await _unitOfWork.ClinicalSessions.GetAsync(
+                s => s.Id == sessionId,
+                trackChanges: false,
+                s => s.SessionAiReport);
+
+            if (session == null)
+            {
+                return GeneralResult<SessionDiagnosisResultDto>.NotFound($"Clinical Session with ID '{sessionId}' was not found.");
+            }
+
+            if (session.SessionAiReport == null && string.IsNullOrEmpty(session.AudioTranscript) && string.IsNullOrEmpty(session.ExtractedSymptoms))
+            {
+                if (session.Status == "Processing" || session.Status == "In Progress")
+                {
+                    return GeneralResult<SessionDiagnosisResultDto>.Failure("Diagnosis is still processing and not available yet.");
+                }
+
+                return GeneralResult<SessionDiagnosisResultDto>.NotFound("Diagnosis result not found for this session.");
+            }
+
+            var resultDto = new SessionDiagnosisResultDto
+            {
+                SessionId = session.Id,
+                Status = session.Status,
+                AudioTranscript = session.AudioTranscript,
+                ExtractedSymptoms = session.ExtractedSymptoms,
+                FinalDiagnosis = session.FinalDiagnosis,
+                PatientSummary = session.SessionAiReport?.PatientSummary,
+                PossibleDiagnoses = session.SessionAiReport?.PossibleDiagnoses,
+                DrugInteractions = session.SessionAiReport?.DrugInteractions,
+                Contraindications = session.SessionAiReport?.Contraindications,
+                SuggestedInvestigations = session.SessionAiReport?.SuggestedInvestigations,
+                ClinicalAlerts = session.SessionAiReport?.ClinicalAlerts,
+                GeneratedAt = session.SessionAiReport?.GeneratedAt
+            };
+
+            return GeneralResult<SessionDiagnosisResultDto>.Success(resultDto, "Diagnosis result retrieved successfully.");
+        }
+
         private void RegisterUploadedDocuments(
             ClinicalSession session,
             List<(IFormFile File, string SavedUrl)> uploadedDocs)
