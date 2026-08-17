@@ -7,8 +7,6 @@ namespace CliniKa.Domain.Entities
     {
         public int Id { get; set; }
         public string FullName { get; set; } = string.Empty;
-        public string? Specialty { get; set; }
-        public string LicenseNumber { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Identity link

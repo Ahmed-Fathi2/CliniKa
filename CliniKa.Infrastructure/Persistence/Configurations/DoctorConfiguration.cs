@@ -17,16 +17,6 @@ namespace CliniKa.Infrastructure.Persistence.Configurations
                 .HasMaxLength(100)
                 .IsRequired();
 
-            builder.Property(d => d.Specialty)
-                .HasMaxLength(100);
-
-            builder.Property(d => d.LicenseNumber)
-                .HasMaxLength(50)
-                .IsRequired();
-
-            builder.HasIndex(d => d.LicenseNumber)
-                .IsUnique();
-
             builder.Property(d => d.CreatedAt)
                 .HasDefaultValueSql("GETDATE()");
 
