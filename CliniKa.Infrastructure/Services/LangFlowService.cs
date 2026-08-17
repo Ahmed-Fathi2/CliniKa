@@ -115,64 +115,42 @@ namespace CliniKa.Infrastructure.Services
 
         public async Task<GeneralResult<object>> TriggerDrugInteractionFlowAsync(WorkflowSessionPayloadDto payload)
         {
-            var tempFilePath = Path.Combine(Path.GetTempPath(), $"payload_{Guid.NewGuid()}.json");
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
 
             try
             {
-                Console.WriteLine($"[LangFlowService] Triggering Drug Interaction Flow for Session {payload.SessionId}...");
+                Console.WriteLine($"[LangFlowService] Triggering Drug Interaction Flow via HttpClient for Session {payload.SessionId}...");
+
+                using var httpClient = new HttpClient();
 
                 var jsonPayload = JsonSerializer.Serialize(payload);
+                var content = new StringContent(jsonPayload, System.Text.Encoding.UTF8, "application/json");
 
-                await File.WriteAllTextAsync(tempFilePath, jsonPayload, cts.Token);
+                var response = await httpClient.PostAsync(DrugInteractionWebhookUrl, content, cts.Token);
+                var responseBody = await response.Content.ReadAsStringAsync(cts.Token);
 
-                var scriptPath = ResolveHelperScriptPath(HelperInteractionsScriptName);
-                if (scriptPath == null)
-                    return GeneralResult<object>.Failure($"Could not find {HelperInteractionsScriptName}.");
+                Console.WriteLine($"[LangFlowService] Drug Interaction Flow responded with status {(int)response.StatusCode}");
 
-                var startInfo = new ProcessStartInfo
+                if (response.IsSuccessStatusCode)
                 {
-                    FileName = "node",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                };
+                    var parsedBody = string.IsNullOrWhiteSpace(responseBody)
+                        ? null
+                        : JsonSerializer.Deserialize<object>(responseBody);
 
-                startInfo.ArgumentList.Add(scriptPath);
-                startInfo.ArgumentList.Add(DrugInteractionWebhookUrl);
-                startInfo.ArgumentList.Add(tempFilePath);
-
-                using var process = Process.Start(startInfo);
-                if (process == null) return GeneralResult<object>.Failure("Failed to start Node process.");
-
-                var output = await process.StandardOutput.ReadToEndAsync();
-                var error = await process.StandardError.ReadToEndAsync();
-
-                await process.WaitForExitAsync(cts.Token);
-
-                if (process.ExitCode != 0 || string.IsNullOrEmpty(output))
-                    return GeneralResult<object>.Failure($"Node.js helper error: {error}");
-
-                using var jsonDoc = JsonDocument.Parse(output);
-                var statusCode = jsonDoc.RootElement.GetProperty("statusCode").GetInt32();
-                var bodyString = jsonDoc.RootElement.GetProperty("body").GetString() ?? string.Empty;
-
-                if (statusCode >= 200 && statusCode < 300)
-                {
-                    var parsedBody = JsonSerializer.Deserialize<object>(bodyString);
-                    return GeneralResult<object>.Success(parsedBody, "Triggered successfully via Node.js");
+                    return GeneralResult<object>.Success(parsedBody, "Triggered successfully via HttpClient");
                 }
 
-                return GeneralResult<object>.Failure($"Status {statusCode}: {bodyString}");
+                return GeneralResult<object>.Failure($"Status {(int)response.StatusCode}: {responseBody}");
+            }
+            catch (TaskCanceledException)
+            {
+                Console.WriteLine("[LangFlowService] Drug Interaction flow timed out.");
+                return GeneralResult<object>.Failure("Drug Interaction flow timed out.");
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[LangFlowService] Exception: {ex.Message}");
                 return GeneralResult<object>.Failure($"Exception: {ex.Message}");
-            }
-            finally
-            {
-                try { if (File.Exists(tempFilePath)) File.Delete(tempFilePath); } catch { }
             }
         }
 
