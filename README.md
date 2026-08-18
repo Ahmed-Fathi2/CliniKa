@@ -1,7 +1,7 @@
 # CliniKa
 # Clean Architecture APIs
 
-A backend solution built with **.NET 9**, implementing Clean Architecture for clean separation of concerns, scalability, and maintainability.
+A backend solution built with **.NET 10**, implementing Clean Architecture for clean separation of concerns, scalability, and maintainability.
 
 ## 🏗️ Architecture & Project Structure
 
