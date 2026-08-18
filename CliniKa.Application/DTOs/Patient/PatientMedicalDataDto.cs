@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace CliniKa.Application.DTOs.Patient
 {
     public class PatientMedicalDataDto
