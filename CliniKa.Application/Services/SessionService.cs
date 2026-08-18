@@ -267,26 +267,32 @@ namespace CliniKa.Application.Services
             var session = await _unitOfWork.ClinicalSessions.GetAsync(
                 s => s.Id == sessionId,
                 trackChanges: false,
-                s => s.SessionAiReport);
+                s => s.SessionAiReport,
+                s => s.Patient,
+                s => s.PrescribedMedications);
 
             if (session == null)
             {
                 return GeneralResult<SessionDiagnosisResultDto>.NotFound($"Clinical Session with ID '{sessionId}' was not found.");
             }
 
-            if (session.SessionAiReport == null && string.IsNullOrEmpty(session.AudioTranscript) && string.IsNullOrEmpty(session.ExtractedSymptoms))
+            var prescribedMedDtos = session.PrescribedMedications?.Select(m => new PrescribedMedicationDto
             {
-                if (session.Status == "Processing" || session.Status == "In Progress")
-                {
-                    return GeneralResult<SessionDiagnosisResultDto>.Failure("Diagnosis is still processing and not available yet.");
-                }
-
-                return GeneralResult<SessionDiagnosisResultDto>.NotFound("Diagnosis result not found for this session.");
-            }
+                Id = m.Id,
+                DrugName = m.DrugName,
+                Dosage = m.Dosage,
+                Frequency = m.Frequency,
+                Duration = m.Duration,
+                Notes = m.Notes
+            }).ToList() ?? new List<PrescribedMedicationDto>();
 
             var resultDto = new SessionDiagnosisResultDto
             {
                 SessionId = session.Id,
+                PatientId = session.PatientId,
+                PatientName = session.Patient != null ? session.Patient.FullName : string.Empty,
+                PatientGender = session.Patient?.Gender,
+                VisitDate = session.VisitDate,
                 Status = session.Status,
                 AudioTranscript = session.AudioTranscript,
                 ExtractedSymptoms = session.ExtractedSymptoms,
@@ -297,10 +303,98 @@ namespace CliniKa.Application.Services
                 Contraindications = session.SessionAiReport?.Contraindications,
                 SuggestedInvestigations = session.SessionAiReport?.SuggestedInvestigations,
                 ClinicalAlerts = session.SessionAiReport?.ClinicalAlerts,
-                GeneratedAt = session.SessionAiReport?.GeneratedAt
+                GeneratedAt = session.SessionAiReport?.GeneratedAt,
+                PrescribedMedications = prescribedMedDtos
             };
 
             return GeneralResult<SessionDiagnosisResultDto>.Success(resultDto, "Diagnosis result retrieved successfully.");
+        }
+
+        /// <inheritdoc />
+        public async Task<GeneralResult<List<DoctorSessionReportDto>>> GetDoctorReportsAsync(string? searchTerm = null)
+        {
+            var userId = _currentUserService.UserId;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return GeneralResult<List<DoctorSessionReportDto>>.Failure("User is not authenticated.");
+            }
+
+            var doctor = await _unitOfWork.Doctors.GetAsync(d => d.UserId == userId);
+            if (doctor == null)
+            {
+                return GeneralResult<List<DoctorSessionReportDto>>.Failure("Doctor profile not found.");
+            }
+
+            var sessions = await _unitOfWork.ClinicalSessions.GetAllAsync(
+                filter: s => s.DoctorId == doctor.Id,
+                sortBy: "VisitDate",
+                isDescending: true,
+                trackChanges: false,
+                s => s.Patient,
+                s => s.SessionAiReport,
+                s => s.PrescribedMedications);
+
+            var query = sessions.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var term = searchTerm.Trim().ToLower();
+                query = query.Where(s =>
+                    s.Id.ToString().Contains(term) ||
+                    (s.Patient != null && s.Patient.FullName.ToLower().Contains(term)) ||
+                    (s.FinalDiagnosis != null && s.FinalDiagnosis.ToLower().Contains(term)) ||
+                    (s.SessionAiReport != null && s.SessionAiReport.PossibleDiagnoses != null && s.SessionAiReport.PossibleDiagnoses.ToLower().Contains(term)));
+            }
+
+            var resultDtos = query.Select(s => new DoctorSessionReportDto
+            {
+                SessionId = s.Id,
+                PatientId = s.PatientId,
+                PatientName = s.Patient != null ? s.Patient.FullName : "Unknown Patient",
+                PatientGender = s.Patient?.Gender,
+                PatientPhoneNumber = s.Patient?.PhoneNumber,
+                VisitDate = s.VisitDate,
+                Status = s.Status,
+                FinalDiagnosis = s.FinalDiagnosis,
+                PossibleDiagnoses = s.SessionAiReport?.PossibleDiagnoses,
+                PatientSummary = s.SessionAiReport?.PatientSummary,
+                HasAiReport = s.SessionAiReport != null,
+                PrescribedMedicationsCount = s.PrescribedMedications?.Count ?? 0
+            }).ToList();
+
+            return GeneralResult<List<DoctorSessionReportDto>>.Success(resultDtos, "Doctor reports retrieved successfully.");
+        }
+
+        /// <inheritdoc />
+        public async Task<GeneralResult<List<PrescribedMedicationDto>>> GetPrescribedMedicationsAsync(int sessionId)
+        {
+            var session = await _unitOfWork.ClinicalSessions.GetAsync(
+                s => s.Id == sessionId,
+                trackChanges: false);
+
+            if (session == null)
+            {
+                return GeneralResult<List<PrescribedMedicationDto>>.NotFound(
+                    $"Clinical Session with ID '{sessionId}' was not found.");
+            }
+
+            var prescribed = await _unitOfWork.PrescribedMedications.GetAllAsync(
+                filter: m => m.SessionId == sessionId,
+                sortBy: null,
+                isDescending: false,
+                trackChanges: false);
+
+            var dtos = prescribed.Select(e => new PrescribedMedicationDto
+            {
+                Id = e.Id,
+                DrugName = e.DrugName,
+                Dosage = e.Dosage,
+                Frequency = e.Frequency,
+                Duration = e.Duration,
+                Notes = e.Notes
+            }).ToList();
+
+            return GeneralResult<List<PrescribedMedicationDto>>.Success(dtos, "Prescriptions retrieved successfully.");
         }
 
         /// <inheritdoc />

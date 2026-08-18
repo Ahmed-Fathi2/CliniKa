@@ -30,5 +30,9 @@ namespace CliniKa.Application.Abstractions.Services
         Task<GeneralResult<List<PrescribedMedicationDto>>> PrescribeMedicationsAsync(
             int sessionId,
             List<PrescribeMedicationRequest> medications);
+
+        Task<GeneralResult<List<PrescribedMedicationDto>>> GetPrescribedMedicationsAsync(int sessionId);
+
+        Task<GeneralResult<List<DoctorSessionReportDto>>> GetDoctorReportsAsync(string? searchTerm = null);
     }
 }

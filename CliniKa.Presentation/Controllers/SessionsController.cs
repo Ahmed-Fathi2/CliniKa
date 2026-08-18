@@ -152,6 +152,34 @@ namespace CliniKa.Presentation.Controllers
             if (result.Status == ResultStatus.NotFound)
                 return NotFound(result);
 
+        /// <summary>
+        /// Retrieves all sessions for the authenticated doctor with optional search.
+        /// </summary>
+        [HttpGet]
+        [HttpGet("doctor")]
+        [HttpGet("doctor-reports")]
+        [Authorize(Roles = RoleConstants.Doctor)]
+        public async Task<IActionResult> GetDoctorSessions([FromQuery] string? search = null)
+        {
+            var result = await _sessionService.GetDoctorReportsAsync(search);
+            return result.IsSuccess ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Retrieves the list of medications already prescribed during this clinical session.
+        /// </summary>
+        [HttpGet("{sessionId:int}/prescribe")]
+        [Authorize(Roles = RoleConstants.Doctor)]
+        public async Task<IActionResult> GetPrescribedMedications([FromRoute] int sessionId)
+        {
+            var result = await _sessionService.GetPrescribedMedicationsAsync(sessionId);
+
+            if (result.IsSuccess)
+                return Ok(result);
+
+            if (result.Status == ResultStatus.NotFound)
+                return NotFound(result);
+
             return BadRequest(result);
         }
 
