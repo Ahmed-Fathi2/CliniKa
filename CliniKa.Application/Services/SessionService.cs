@@ -4,6 +4,7 @@ using CliniKa.Application.Abstractions.Services;
 using CliniKa.Application.DTOs;
 using CliniKa.Application.DTOs.FormFile;
 using CliniKa.Application.DTOs.Langflow;
+using CliniKa.Application.DTOs.Patient;
 using CliniKa.Application.DTOs.Sessions;
 using CliniKa.Domain.Entities;
 using CliniKa.Domain.Repositories;
@@ -235,7 +236,7 @@ namespace CliniKa.Application.Services
                     isDescending: false,
                     trackChanges: false);
 
-            var newMedicationsDto = prescribedMedications.Select(m => m.DrugName).FirstOrDefault(); //string.Join(", ", prescribedMedications.Select(m => m.DrugName));
+            var newMedicationsDto = prescribedMedications.Select(m => m.DrugName).ToList();
 
             var activeMedications = await _unitOfWork.ActiveMedications.GetAllAsync(
                 filter: m => m.PatientId == session.PatientId && (m.EndDate == null || m.EndDate.Value.Date >= DateTime.UtcNow.Date),
@@ -253,7 +254,7 @@ namespace CliniKa.Application.Services
                 PatientId = session.PatientId,
                 PatientName = patient?.FullName,
                 AudioTranscript = session.AudioTranscript,
-                //NewMedications = newMedicationsDto,
+                NewMedications = newMedicationsDto,
                 CurrentMedications = currentMedicationsDto,
                 PossibleDiagnoses = aiReport?.PossibleDiagnoses
             };
@@ -300,6 +301,73 @@ namespace CliniKa.Application.Services
             };
 
             return GeneralResult<SessionDiagnosisResultDto>.Success(resultDto, "Diagnosis result retrieved successfully.");
+        }
+
+        /// <inheritdoc />
+        public async Task<GeneralResult<List<PrescribedMedicationDto>>> PrescribeMedicationsAsync(
+            int sessionId,
+            List<PrescribeMedicationRequest> medications)
+        {
+            // 1. Validate session exists
+            var session = await _unitOfWork.ClinicalSessions.GetAsync(
+                s => s.Id == sessionId,
+                trackChanges: false);
+
+            if (session == null)
+            {
+                return GeneralResult<List<PrescribedMedicationDto>>.NotFound(
+                    $"Clinical Session with ID '{sessionId}' was not found.");
+            }
+
+            // 2. Verify the authenticated user is the doctor who owns this session
+            var userId = _currentUserService.UserId;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return GeneralResult<List<PrescribedMedicationDto>>.Failure("User is not authenticated.");
+            }
+
+            var doctor = await _unitOfWork.Doctors.GetAsync(d => d.UserId == userId);
+            if (doctor == null || doctor.Id != session.DoctorId)
+            {
+                return GeneralResult<List<PrescribedMedicationDto>>.Failure(
+                    "You are not authorized to prescribe medications for this session.");
+            }
+
+            // 3. Validate the session is in a valid state
+            if (session.Status != "In Progress" && session.Status != "Completed" && session.Status != "Processing")
+            {
+                return GeneralResult<List<PrescribedMedicationDto>>.Failure(
+                    $"Cannot prescribe medications for a session with status '{session.Status}'.");
+            }
+
+            // 4. Map DTOs to entities and insert
+            var entities = medications.Select(m => new PrescribedMedication
+            {
+                SessionId = sessionId,
+                DrugName = m.DrugName.Trim(),
+                Dosage = m.Dosage?.Trim(),
+                Frequency = m.Frequency?.Trim(),
+                Duration = m.Duration?.Trim(),
+                Notes = m.Notes?.Trim()
+            }).ToList();
+
+            _unitOfWork.PrescribedMedications.AddRange(entities);
+            await _unitOfWork.SaveChangesAsync();
+
+            // 5. Map saved entities to response DTOs
+            var resultDtos = entities.Select(e => new PrescribedMedicationDto
+            {
+                Id = e.Id,
+                DrugName = e.DrugName,
+                Dosage = e.Dosage,
+                Frequency = e.Frequency,
+                Duration = e.Duration,
+                Notes = e.Notes
+            }).ToList();
+
+            return GeneralResult<List<PrescribedMedicationDto>>.Success(
+                resultDtos,
+                $"{resultDtos.Count} medication(s) prescribed successfully.");
         }
 
         private void RegisterUploadedDocuments(

@@ -1,7 +1,9 @@
 using CliniKa.Application;
 using CliniKa.Application.Abstractions.Services;
+using CliniKa.Application.Constants;
 using CliniKa.Application.DTOs.Langflow;
 using CliniKa.Application.DTOs.Sessions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CliniKa.Presentation.Controllers
@@ -124,6 +126,33 @@ namespace CliniKa.Presentation.Controllers
                 return NotFound(saveResult);
 
             return BadRequest(saveResult);
+        }
+
+        /// <summary>
+        /// Prescribes one or more medications for a patient during a clinical session.
+        /// The prescribed medications are saved to the PrescribedMedications table
+        /// and will be included in the drug interaction check payload.
+        /// </summary>
+        [HttpPost("{sessionId:int}/prescribe")]
+        [Authorize(Roles = RoleConstants.Doctor)]
+        public async Task<IActionResult> PrescribeMedications(
+            [FromRoute] int sessionId,
+            [FromBody] List<PrescribeMedicationRequest> medications)
+        {
+            if (medications == null || medications.Count == 0)
+            {
+                return BadRequest(GeneralResult.Failure("At least one medication is required."));
+            }
+
+            var result = await _sessionService.PrescribeMedicationsAsync(sessionId, medications);
+
+            if (result.IsSuccess)
+                return Ok(result);
+
+            if (result.Status == ResultStatus.NotFound)
+                return NotFound(result);
+
+            return BadRequest(result);
         }
 
         [HttpPost("{sessionId}/trigger-interaction-check")]
