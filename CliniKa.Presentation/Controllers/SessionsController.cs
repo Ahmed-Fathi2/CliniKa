@@ -152,6 +152,9 @@ namespace CliniKa.Presentation.Controllers
             if (result.Status == ResultStatus.NotFound)
                 return NotFound(result);
 
+            return BadRequest(result);
+        }
+
         /// <summary>
         /// Retrieves all sessions for the authenticated doctor with optional search.
         /// </summary>
