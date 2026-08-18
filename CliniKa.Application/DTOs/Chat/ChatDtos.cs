@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace CliniKa.Application.DTOs.Chat
@@ -39,20 +37,5 @@ namespace CliniKa.Application.DTOs.Chat
         public string Title { get; set; } = string.Empty;
         public DateTime LastMessageAt { get; set; }
         public int MessageCount { get; set; }
-    }
-
-    /// <summary>
-    /// Payload sent to ActivePieces chatbot flow.
-    /// </summary>
-    public class ChatFlowPayloadDto
-    {
-        [JsonPropertyName("systemPrompt")]
-        public string SystemPrompt { get; set; } = string.Empty;
-        
-        [JsonPropertyName("newQuestion")]
-        public string NewQuestion { get; set; } = string.Empty;
-        
-        [JsonPropertyName("messages")]
-        public List<ChatMessageDto> Messages { get; set; } = new();
     }
 }

@@ -7,10 +7,10 @@ namespace CliniKa.Application.Abstractions.Services
     public interface IChatService
     {
         /// <summary>
-        /// Sends a user message, triggers the AI flow with full conversation history,
-        /// and returns the AI response. Creates the ChatSession in DB if chatSessionId is null or 0.
+        /// Sends a user message via the Langflow Agent flow (agent handles memory and patient context via tools).
+        /// Creates the ChatSession in DB if chatSessionId is null or 0.
         /// </summary>
-        Task<GeneralResult<SendMessageResponseDto>> SendMessageAsync(int patientId, int? chatSessionId, string message);
+        Task<GeneralResult<SendMessageResponseDto>> SendMessageViaAgentAsync(int patientId, int? chatSessionId, string message);
 
         /// <summary>
         /// Returns the full message history for a chat session.
@@ -23,5 +23,6 @@ namespace CliniKa.Application.Abstractions.Services
         /// Ordered by most recent message first.
         /// </summary>
         Task<GeneralResult<List<ChatSessionSummaryDto>>> GetPatientChatsAsync(int patientId);
+
     }
 }

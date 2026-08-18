@@ -119,10 +119,6 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                     b.Property<int>("PatientId")
                         .HasColumnType("int");
 
-                    b.Property<string>("SystemPrompt")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .ValueGeneratedOnAdd()

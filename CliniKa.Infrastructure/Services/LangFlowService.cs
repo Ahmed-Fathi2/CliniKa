@@ -3,7 +3,10 @@ using CliniKa.Application.Abstractions.Services;
 using CliniKa.Application.DTOs.Chat;
 using CliniKa.Application.DTOs.Sessions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
+using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 
 namespace CliniKa.Infrastructure.Services
@@ -16,10 +19,16 @@ namespace CliniKa.Infrastructure.Services
         private const string ChatbotWebhookUrl = "https://matrimony-valiant-unedited.ngrok-free.dev/patient-chat";
         private const string HelperScriptName = "langflow_helper.js";
         private const string HelperInteractionsScriptName = "langflow_trigger_interaction_json_helper.js";
-        private const string ChatbotHelperScriptName = "chatbot_flow_json_helper.js";
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly string _agentFlowUrl;
+        private readonly string _agentApiKey;
 
-        public LangFlowService()
+        public LangFlowService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
+            _httpClientFactory = httpClientFactory;
+            _agentFlowUrl = configuration["LangFlow:AgentFlowUrl"]
+                ?? throw new InvalidOperationException("LangFlow:AgentFlowUrl is not configured in appsettings.");
+            _agentApiKey = configuration["LangFlow:AgentApiKey"] ?? string.Empty;
         }
 
         public async Task<GeneralResult<string>> TriggerDiagnosisFlowAsync(
@@ -156,88 +165,136 @@ namespace CliniKa.Infrastructure.Services
 
 
         /// <summary>
-        /// Sends system prompt + conversation history to the ActivePieces chatbot flow.
-        /// Uses the same Node.js helper pattern (JSON payload via temp file) for SSL compatibility.
+        /// Calls the Langflow Agent API directly via HttpClient.
+        /// The agent handles chat memory internally via session_id and retrieves
+        /// patient medical data using its own tool (get_patient_medical_profile) with the provided JWT.
         /// </summary>
-        public async Task<GeneralResult<string>> TriggerChatbotFlowAsync(ChatFlowPayloadDto payload)
+        public async Task<GeneralResult<string>> CallLangflowChatbotAgentAsync(string userMessage, string sessionId, string jwtToken)
         {
-            var tempFilePath = Path.Combine(Path.GetTempPath(), $"chat_payload_{Guid.NewGuid()}.json");
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(240));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
 
             try
             {
-                Console.WriteLine($"[LangFlowService] Triggering Chatbot Flow...");
+                Console.WriteLine($"[LangFlowService] Calling Langflow Agent (session: {sessionId})...");
 
-                var jsonPayload = JsonSerializer.Serialize(payload);
-                await File.WriteAllTextAsync(tempFilePath, jsonPayload, new System.Text.UTF8Encoding(false), cts.Token);
+                var httpClient = _httpClientFactory.CreateClient();
 
-                var scriptPath = ResolveHelperScriptPath(ChatbotHelperScriptName);
-                if (scriptPath == null)
-                    return GeneralResult<string>.Failure($"Could not find {ChatbotHelperScriptName}.");
-
-                var startInfo = new ProcessStartInfo
+                // Build the exact payload matching the Langflow API format
+                var payload = new
                 {
-                    FileName = "node",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
+                    output_type = "chat",
+                    input_type = "chat",
+                    input_value = userMessage,
+                    session_id = sessionId,
+                    tweaks = new Dictionary<string, object>
+                    {
+                        ["CustomComponent-25Mo5"] = new Dictionary<string, string>
+                        {
+                            ["auth_token"] = jwtToken
+                        }
+                    }
                 };
 
-                startInfo.ArgumentList.Add(scriptPath);
-                startInfo.ArgumentList.Add(ChatbotWebhookUrl);
-                startInfo.ArgumentList.Add(tempFilePath);
+                var jsonPayload = JsonSerializer.Serialize(payload);
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                using var process = Process.Start(startInfo);
-                if (process == null)
-                    return GeneralResult<string>.Failure("Failed to start Node.js helper process.");
-
-                var output = await process.StandardOutput.ReadToEndAsync();
-                var error = await process.StandardError.ReadToEndAsync();
-
-                await process.WaitForExitAsync(cts.Token);
-
-                if (process.ExitCode != 0 || string.IsNullOrEmpty(output))
-                    return GeneralResult<string>.Failure($"Node.js helper error: {error}");
-
-                using var jsonDoc = JsonDocument.Parse(output);
-                var statusCode = jsonDoc.RootElement.GetProperty("statusCode").GetInt32();
-                var bodyString = jsonDoc.RootElement.GetProperty("body").GetString() ?? string.Empty;
-
-                if (statusCode >= 200 && statusCode < 300)
+                // Set x-api-key header if configured
+                var request = new HttpRequestMessage(HttpMethod.Post, _agentFlowUrl)
                 {
-                    // Try to extract a "reply"/"response"/"message" field if JSON, otherwise use raw body
-                    try
-                    {
-                        using var replyDoc = JsonDocument.Parse(bodyString);
-                        if (replyDoc.RootElement.TryGetProperty("reply", out var replyProp))
-                            return GeneralResult<string>.Success(replyProp.GetString() ?? bodyString, "Chatbot responded successfully.");
-                        if (replyDoc.RootElement.TryGetProperty("answer", out var answerProp))
-                            return GeneralResult<string>.Success(answerProp.GetString() ?? bodyString, "Chatbot responded successfully.");
-                        if (replyDoc.RootElement.TryGetProperty("response", out var responseProp))
-                            return GeneralResult<string>.Success(responseProp.GetString() ?? bodyString, "Chatbot responded successfully.");
-                        if (replyDoc.RootElement.TryGetProperty("message", out var messageProp))
-                            return GeneralResult<string>.Success(messageProp.GetString() ?? bodyString, "Chatbot responded successfully.");
-                    }
-                    catch { /* Body is plain text */ }
+                    Content = content
+                };
 
-                    return GeneralResult<string>.Success(bodyString, "Chatbot responded successfully.");
+                if (!string.IsNullOrEmpty(_agentApiKey))
+                {
+                    request.Headers.Add("x-api-key", _agentApiKey);
                 }
 
-                return GeneralResult<string>.Failure($"Chatbot flow returned status {statusCode}: {bodyString}");
+                var response = await httpClient.SendAsync(request, cts.Token);
+                var responseBody = await response.Content.ReadAsStringAsync(cts.Token);
+
+                Console.WriteLine($"[LangFlowService] Langflow Agent responded with status {(int)response.StatusCode}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"[LangFlowService] Agent error response: {responseBody}");
+                    return GeneralResult<string>.Failure($"Langflow Agent returned status {(int)response.StatusCode}: {responseBody}");
+                }
+
+                // Parse Langflow response to extract the AI reply text
+                // Expected structure: { "outputs": [{ "outputs": [{ "results": { "message": { "text": "..." } } }] }] }
+                var aiReply = ExtractLangflowAgentReply(responseBody);
+                if (aiReply == null)
+                {
+                    Console.WriteLine($"[LangFlowService] Could not extract reply from response: {responseBody}");
+                    return GeneralResult<string>.Failure("Failed to extract reply from Langflow Agent response.");
+                }
+
+                return GeneralResult<string>.Success(aiReply, "Langflow Agent responded successfully.");
             }
             catch (OperationCanceledException)
             {
-                return GeneralResult<string>.Failure("Chatbot flow timed out.");
+                Console.WriteLine("[LangFlowService] Langflow Agent call timed out.");
+                return GeneralResult<string>.Failure("Langflow Agent call timed out after 120 seconds.");
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"[LangFlowService] HTTP error calling Langflow Agent: {ex.Message}");
+                return GeneralResult<string>.Failure($"HTTP error calling Langflow Agent: {ex.Message}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[LangFlowService] Chatbot Exception: {ex.Message}");
-                return GeneralResult<string>.Failure($"Exception triggering chatbot flow: {ex.Message}");
+                Console.WriteLine($"[LangFlowService] Exception calling Langflow Agent: {ex.Message}");
+                return GeneralResult<string>.Failure($"Exception calling Langflow Agent: {ex.Message}");
             }
-            finally
+        }
+
+        /// <summary>
+        /// Extracts the AI reply text from the Langflow Agent API response JSON.
+        /// Tries the standard nested structure first, then falls back to simpler paths.
+        /// </summary>
+        private static string? ExtractLangflowAgentReply(string responseJson)
+        {
+            try
             {
-                try { if (File.Exists(tempFilePath)) File.Delete(tempFilePath); } catch { }
+                using var doc = JsonDocument.Parse(responseJson);
+                var root = doc.RootElement;
+
+                // Standard Langflow response: outputs[0].outputs[0].results.message.text
+                if (root.TryGetProperty("outputs", out var outputsArray)
+                    && outputsArray.GetArrayLength() > 0)
+                {
+                    var firstOutput = outputsArray[0];
+                    if (firstOutput.TryGetProperty("outputs", out var innerOutputsArray)
+                        && innerOutputsArray.GetArrayLength() > 0)
+                    {
+                        var innerFirst = innerOutputsArray[0];
+                        if (innerFirst.TryGetProperty("results", out var results)
+                            && results.TryGetProperty("message", out var message)
+                            && message.TryGetProperty("text", out var text))
+                        {
+                            return text.GetString();
+                        }
+                    }
+                }
+
+                // Fallback: try common top-level keys
+                foreach (var key in new[] { "result", "response", "message", "text", "reply", "answer" })
+                {
+                    if (root.TryGetProperty(key, out var prop))
+                    {
+                        if (prop.ValueKind == JsonValueKind.String)
+                            return prop.GetString();
+                        if (prop.TryGetProperty("text", out var innerText))
+                            return innerText.GetString();
+                    }
+                }
+
+                // Last resort: return raw JSON
+                return responseJson;
+            }
+            catch
+            {
+                return null;
             }
         }
     }
