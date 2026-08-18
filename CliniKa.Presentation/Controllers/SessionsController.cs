@@ -158,8 +158,6 @@ namespace CliniKa.Presentation.Controllers
         /// <summary>
         /// Retrieves all sessions for the authenticated doctor with optional search.
         /// </summary>
-        [HttpGet]
-        [HttpGet("doctor")]
         [HttpGet("doctor-reports")]
         [Authorize(Roles = RoleConstants.Doctor)]
         public async Task<IActionResult> GetDoctorSessions([FromQuery] string? search = null)
