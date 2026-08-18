@@ -30,9 +30,6 @@
 		<Content Include="langflow_trigger_interaction_json_helper.js">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
-		<Content Include="chatbot_flow_json_helper.js">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
 	</ItemGroup>
 
 </Project>

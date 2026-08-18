@@ -28,7 +28,7 @@ namespace CliniKa.Presentation.Controllers
                 return BadRequest(GeneralResult.Failure("Message cannot be empty."));
             }
 
-            var result = await _chatService.SendMessageAsync(dto.PatientId, dto.ChatSessionId, dto.Message);
+            var result = await _chatService.SendMessageViaAgentAsync(dto.PatientId, dto.ChatSessionId, dto.Message);
 
             if (result.IsSuccess)
                 return Ok(result);

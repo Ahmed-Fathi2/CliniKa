@@ -24,9 +24,10 @@ namespace CliniKa.Application.Abstractions.Services
         Task<GeneralResult<object>> TriggerDrugInteractionFlowAsync(WorkflowSessionPayloadDto payload);
 
         /// <summary>
-        /// Sends the system prompt and conversation history to the Activepieces chatbot flow.
-        /// Returns the AI assistant's reply.
+        /// Calls the Langflow Agent API directly via HTTP POST.
+        /// The agent handles chat memory internally via session_id and retrieves
+        /// patient medical data using its own tool (get_patient_medical_profile) with the provided JWT.
         /// </summary>
-        Task<GeneralResult<string>> TriggerChatbotFlowAsync(ChatFlowPayloadDto payload);
+        Task<GeneralResult<string>> CallLangflowChatbotAgentAsync(string userMessage, string sessionId, string jwtToken);
     }
 }

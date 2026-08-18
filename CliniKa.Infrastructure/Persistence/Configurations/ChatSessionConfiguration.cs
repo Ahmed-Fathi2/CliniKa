@@ -17,9 +17,6 @@ namespace CliniKa.Infrastructure.Persistence.Configurations
                 .HasDefaultValue("New Conversation")
                 .IsRequired();
 
-            builder.Property(c => c.SystemPrompt)
-                .IsRequired();
-
             builder.Property(c => c.MessagesJson)
                 .HasColumnType("nvarchar(max)")
                 .HasDefaultValue("[]")
