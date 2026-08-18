@@ -8,7 +8,7 @@ namespace CliniKa.Application.DTOs.Sessions
         public int PatientId { get; set; }
         public string PatientName { get; set; } = string.Empty;
         public string? PatientGender { get; set; }
-        public string? PatientPhoneNumber { get; set; }
+        public string? PatientNationalId { get; set; }
         public DateTime VisitDate { get; set; }
         public string Status { get; set; } = string.Empty;
         public string? FinalDiagnosis { get; set; }

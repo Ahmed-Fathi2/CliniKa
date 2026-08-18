@@ -352,7 +352,7 @@ namespace CliniKa.Application.Services
                 PatientId = s.PatientId,
                 PatientName = s.Patient != null ? s.Patient.FullName : "Unknown Patient",
                 PatientGender = s.Patient?.Gender,
-                PatientPhoneNumber = s.Patient?.PhoneNumber,
+                PatientNationalId = s.Patient?.NationalId,
                 VisitDate = s.VisitDate,
                 Status = s.Status,
                 FinalDiagnosis = s.FinalDiagnosis,
