@@ -14,6 +14,7 @@ namespace CliniKa.Domain.Repositories
         IChatSessionRepository ChatSessions { get; }
         IDiseaseRepository Diseases { get; }
         IAllergyRepository Allergies { get; }
+        IDashboardRepository Dashboard { get; }
         Task<int> SaveChangesAsync();
 
         // Transaction methods

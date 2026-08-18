@@ -84,6 +84,7 @@ namespace CliniKa.Infrastructure.Extensions
             services.AddScoped<IChatSessionRepository, ChatSessionRepository>();
             services.AddScoped<IDiseaseRepository, DiseaseRepository>();
             services.AddScoped<IAllergyRepository, AllergyRepository>();
+            services.AddScoped<IDashboardRepository, DashboardRepository>();
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IJwtProvider, JwtProvider>();
@@ -93,6 +94,7 @@ namespace CliniKa.Infrastructure.Extensions
             services.AddScoped<IFileService, FileService>();
             services.AddScoped<ISessionService, SessionService>();
             services.AddScoped<IChatService, ChatService>();
+            services.AddScoped<IDashboardService, DashboardService>();
 
             // SSE Notification Service — MUST be Singleton so the same instance
             // is shared between the SSE endpoint (reader) and the callback (writer).
