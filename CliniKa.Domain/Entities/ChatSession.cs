@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace CliniKa.Domain.Entities
 {
     public class ChatSession
