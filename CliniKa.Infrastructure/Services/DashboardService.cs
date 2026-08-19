@@ -22,7 +22,8 @@ namespace CliniKa.Infrastructure.Services
 
             return new DashboardSummaryDto
             {
-                TopDiseases = topDiseases == null ? dummyTopDiseases : topDiseases,
+                //TopDiseases = topDiseases == null || topDiseases.Count == 0 ? dummyTopDiseases : topDiseases,
+                TopDiseases = dummyTopDiseases,
                 TotalAiSessions = totalAiSessions,
             };
         }
