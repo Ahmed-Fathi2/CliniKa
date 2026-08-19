@@ -29,6 +29,8 @@ namespace CliniKa.Infrastructure.Repositories
                 .Include(p => p.PatientAllergies)
                     .ThenInclude(pa => pa.Allergy)
                 .Include(p => p.ActiveMedications)
+                    .ThenInclude(am => am.SourceSession)
+                        .ThenInclude(s => s.Doctor)
                 .Include(p => p.ClinicalSessions)
                     .ThenInclude(cs => cs.Doctor)
                 .Include(p => p.ClinicalSessions)
