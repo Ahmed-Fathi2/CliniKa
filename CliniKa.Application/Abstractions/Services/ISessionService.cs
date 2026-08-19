@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using CliniKa.Application.DTOs.Patient;
 using CliniKa.Application.DTOs.Sessions;
 using CliniKa.Application.DTOs.Langflow;
 
@@ -25,5 +26,13 @@ namespace CliniKa.Application.Abstractions.Services
         Task<GeneralResult<WorkflowSessionPayloadDto>> GetWorkflowPayloadAsync(int sessionId);
 
         Task<GeneralResult<SessionDiagnosisResultDto>> GetSessionDiagnosisAsync(int sessionId);
+
+        Task<GeneralResult<List<PrescribedMedicationDto>>> PrescribeMedicationsAsync(
+            int sessionId,
+            List<PrescribeMedicationRequest> medications);
+
+        Task<GeneralResult<List<PrescribedMedicationDto>>> GetPrescribedMedicationsAsync(int sessionId);
+
+        Task<GeneralResult<List<DoctorSessionReportDto>>> GetDoctorReportsAsync(string? searchTerm = null);
     }
 }

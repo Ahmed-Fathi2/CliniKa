@@ -31,6 +31,8 @@ namespace CliniKa.Infrastructure.Repositories
                 .Include(p => p.ActiveMedications)
                 .Include(p => p.ClinicalSessions)
                     .ThenInclude(cs => cs.Doctor)
+                .Include(p => p.ClinicalSessions)
+                    .ThenInclude(cs => cs.PrescribedMedications)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.UserId == userId);
         }

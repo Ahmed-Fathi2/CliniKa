@@ -295,6 +295,21 @@ namespace CliniKa.Application.Services
                     EndDate = am.EndDate?.ToString("yyyy-MM-dd") ?? ""
                 }).ToList(),
 
+                PrescribedMedications = patient.ClinicalSessions
+                    .Where(cs => cs.PrescribedMedications != null && cs.PrescribedMedications.Any()) 
+                    .SelectMany(cs => cs.PrescribedMedications.Select(pm => new PrescribedMedicationObject
+                    {
+                        DrugName = pm.DrugName,
+                        Dosage = pm.Dosage ?? string.Empty,
+                        Frequency = pm.Frequency ?? string.Empty,
+                        Duration = pm.Duration ?? string.Empty,
+                        Notes = pm.Notes ?? string.Empty,
+                        DoctorName = cs.Doctor != null ? cs.Doctor.FullName : string.Empty,
+                        SessionDate = cs.VisitDate.ToString("yyyy-MM-dd")
+                    }))
+                    .OrderByDescending(pm => pm.SessionDate) 
+                    .ToList(),
+
                 Diseases = patient.PatientDiseases.Select(pd => new DiseaseDto
                 {
                     DiseaseCode = pd.Disease != null ? pd.Disease.DiseaseCode : "CUSTOM",
