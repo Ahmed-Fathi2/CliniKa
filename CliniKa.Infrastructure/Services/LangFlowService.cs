@@ -15,13 +15,13 @@ namespace CliniKa.Infrastructure.Services
     {
         private const string WebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/p1CEPLFpP2z8qBAhZA48A";
         private const string DrugInteractionWebhookUrl = "https://cloud.activepieces.com/api/v1/webhooks/irtY6rMKe4Mb1fVjwTuGv/sync";
-        // TODO: Replace with your actual ActivePieces chatbot flow webhook URL
-        private const string ChatbotWebhookUrl = "https://matrimony-valiant-unedited.ngrok-free.dev/patient-chat";
         private const string HelperScriptName = "langflow_helper.js";
         private const string HelperInteractionsScriptName = "langflow_trigger_interaction_json_helper.js";
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly string _agentFlowUrl;
         private readonly string _agentApiKey;
+        private readonly string _agentAuthComponentKey;
+        private readonly string _agentAuthTokenParam;
 
         public LangFlowService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
@@ -29,6 +29,12 @@ namespace CliniKa.Infrastructure.Services
             _agentFlowUrl = configuration["LangFlow:AgentFlowUrl"]
                 ?? throw new InvalidOperationException("LangFlow:AgentFlowUrl is not configured in appsettings.");
             _agentApiKey = configuration["LangFlow:AgentApiKey"] ?? string.Empty;
+            _agentAuthComponentKey = configuration["LangFlow:AgentAuthComponentKey"]
+                ?? configuration["LangFlow:AgentAuthComponent"]
+                ?? "GetPatientMedicalProfile-7ZhJw";
+            _agentAuthTokenParam = configuration["LangFlow:AgentAuthTokenParam"]
+                ?? configuration["LangFlow:AgentAuthToken"]
+                ?? "auth_token";
         }
 
         public async Task<GeneralResult<string>> TriggerDiagnosisFlowAsync(
@@ -188,9 +194,9 @@ namespace CliniKa.Infrastructure.Services
                     session_id = sessionId,
                     tweaks = new Dictionary<string, object>
                     {
-                        ["CustomComponent-25Mo5"] = new Dictionary<string, string>
+                        [_agentAuthComponentKey] = new Dictionary<string, string>
                         {
-                            ["auth_token"] = jwtToken
+                            [_agentAuthTokenParam] = jwtToken
                         }
                     }
                 };

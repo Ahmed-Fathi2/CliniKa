@@ -210,8 +210,69 @@ namespace CliniKa.Tests
             Assert.Equal(sessionId, root.GetProperty("session_id").GetString());
 
             var tweaks = root.GetProperty("tweaks");
-            var customComponent = tweaks.GetProperty("CustomComponent-25Mo5");
+            var customComponent = tweaks.GetProperty("GetPatientMedicalProfile-7ZhJw");
             Assert.Equal(jwtToken, customComponent.GetProperty("auth_token").GetString());
+        }
+
+        [Fact]
+        public async Task CallLangflowChatbotAgentAsync_ShouldUseConfiguredTweaks_WhenSpecifiedInConfiguration()
+        {
+            // Arrange
+            string userMessage = "Tell me about hypertension.";
+            string sessionId = "clinika-chat-99";
+            string jwtToken = "custom-token-xyz";
+            string customComponentKey = "CustomComponent-Updated123";
+            string customAuthTokenParam = "custom_auth_param";
+
+            HttpRequestMessage? capturedRequest = null;
+            string? capturedBody = null;
+
+            var mockHandler = new Mock<HttpMessageHandler>();
+            mockHandler.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .Callback<HttpRequestMessage, CancellationToken>((req, ct) =>
+                {
+                    capturedRequest = req;
+                    capturedBody = req.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+                })
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(@"{ ""result"": ""Hypertension is high blood pressure."" }", Encoding.UTF8, "application/json")
+                });
+
+            var httpClient = new HttpClient(mockHandler.Object);
+            var mockHttpClientFactory = new Mock<IHttpClientFactory>();
+            mockHttpClientFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
+
+            var configValues = new Dictionary<string, string?>
+            {
+                { "LangFlow:AgentFlowUrl", "http://localhost:7860/api/v1/run/test-flow-id" },
+                { "LangFlow:AgentApiKey", "test-api-key" },
+                { "LangFlow:AgentAuthComponentKey", customComponentKey },
+                { "LangFlow:AgentAuthTokenParam", customAuthTokenParam }
+            };
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(configValues)
+                .Build();
+
+            var service = new LangFlowService(mockHttpClientFactory.Object, configuration);
+
+            // Act
+            var result = await service.CallLangflowChatbotAgentAsync(userMessage, sessionId, jwtToken);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.NotNull(capturedBody);
+            using var doc = JsonDocument.Parse(capturedBody);
+            var root = doc.RootElement;
+
+            var tweaks = root.GetProperty("tweaks");
+            var customComponent = tweaks.GetProperty(customComponentKey);
+            Assert.Equal(jwtToken, customComponent.GetProperty(customAuthTokenParam).GetString());
         }
 
         [Fact]
