@@ -9,6 +9,7 @@ namespace CliniKa.Application.DTOs.Patient
         public string? BloodType { get; set; }
 
         public List<MedicationDto> ActiveMedications { get; set; } = new();
+        public List<PrescribedMedicationObject> PrescribedMedications { get; set; } = new();
         public List<DiseaseDto> Diseases { get; set; } = new();
         public List<AllergyDto> Allergies { get; set; } = new();
         public List<PatientSessionDto> Sessions { get; set; } = new();
