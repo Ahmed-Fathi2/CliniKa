@@ -18,6 +18,7 @@ namespace CliniKa.Infrastructure.Services
         private const string HelperScriptName = "langflow_helper.js";
         private const string HelperInteractionsScriptName = "langflow_trigger_interaction_json_helper.js";
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly string _webhookSecret;
         private readonly string _agentFlowUrl;
         private readonly string _agentApiKey;
         private readonly string _agentAuthComponentKey;
@@ -26,6 +27,7 @@ namespace CliniKa.Infrastructure.Services
         public LangFlowService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _httpClientFactory = httpClientFactory;
+            _webhookSecret = configuration["LangFlow:WebhookSecret"] ?? "k9J2$mQx7#pL4vN8@yR3zT6g";
             _agentFlowUrl = configuration["LangFlow:AgentFlowUrl"]
                 ?? throw new InvalidOperationException("LangFlow:AgentFlowUrl is not configured in appsettings.");
             _agentApiKey = configuration["LangFlow:AgentApiKey"] ?? string.Empty;
@@ -48,7 +50,9 @@ namespace CliniKa.Infrastructure.Services
             {
                 Console.WriteLine($"[LangFlowService] Triggering Activepieces via HttpClient for Session {sessionId}...");
 
-                using var httpClient = new HttpClient();
+                using var httpClient = _httpClientFactory.CreateClient();
+                httpClient.DefaultRequestHeaders.Add("X-Webhook-Secret", _webhookSecret);
+
                 using var formData = new MultipartFormDataContent();
 
                 formData.Add(new StringContent(sessionId.ToString()), "sessionId");

@@ -65,6 +65,34 @@ namespace CliniKa.Tests
         }
 
         [Fact]
+        public async Task TriggerDiagnosisFlowAsync_ShouldSendWebhookSecretHeader()
+        {
+            // Arrange
+            HttpRequestMessage? capturedRequest = null;
+            var service = CreateServiceWithMockHttp(
+                HttpStatusCode.OK,
+                @"{ ""status"": ""success"" }",
+                onRequest: req => capturedRequest = req);
+
+            var audioContent = Encoding.UTF8.GetBytes("fake audio content");
+            var audioStream = new MemoryStream(audioContent);
+            var audioFile = new FormFile(audioStream, 0, audioContent.Length, "audio", "test_audio.mp3")
+            {
+                Headers = new HeaderDictionary(),
+                ContentType = "audio/mpeg"
+            };
+
+            // Act
+            var result = await service.TriggerDiagnosisFlowAsync(123, audioFile, null);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.NotNull(capturedRequest);
+            Assert.True(capturedRequest.Headers.Contains("X-Webhook-Secret"));
+            Assert.Equal("k9J2$mQx7#pL4vN8@yR3zT6g", capturedRequest.Headers.GetValues("X-Webhook-Secret").First());
+        }
+
+        [Fact]
         public async Task TriggerDiagnosisFlowAsync_ShouldAcceptIFormFileParameters()
         {
             // Arrange
