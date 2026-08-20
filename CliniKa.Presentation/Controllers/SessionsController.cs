@@ -210,6 +210,26 @@ namespace CliniKa.Presentation.Controllers
             return BadRequest(result);
         }
 
+        /// <summary>
+        /// Deletes a specific prescribed medication from a clinical session.
+        /// </summary>
+        [HttpDelete("{sessionId:int}/prescribe/{medicationId:int}")]
+        [Authorize(Roles = RoleConstants.Doctor)]
+        public async Task<IActionResult> DeletePrescribedMedication(
+            [FromRoute] int sessionId,
+            [FromRoute] int medicationId)
+        {
+            var result = await _sessionService.DeletePrescribedMedicationAsync(sessionId, medicationId);
+
+            if (result.IsSuccess)
+                return Ok(result);
+
+            if (result.Status == ResultStatus.NotFound)
+                return NotFound(result);
+
+            return BadRequest(result);
+        }
+
         [HttpPost("{sessionId}/trigger-interaction-check")]
         public async Task<IActionResult> TriggerInteractionCheck(int sessionId)
         {

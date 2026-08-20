@@ -235,7 +235,70 @@ namespace CliniKa.Tests
         }
 
         [Fact]
-        public async Task UpdatePrescribedMedicationsAsync_ShouldDeleteExistingAndAddNewMedications_WhenSuccessful()
+        public async Task UpdatePrescribedMedicationsAsync_ShouldUpdateTrackedEntitiesAndAddNew_WithoutDeletingOthers()
+        {
+            var sessionId = 10;
+            var session = new ClinicalSession { Id = sessionId, DoctorId = 2, Status = "In Progress" };
+
+            _mockSessionRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<ClinicalSession, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<ClinicalSession, object>>[]>()
+            )).ReturnsAsync(session);
+
+            _mockCurrentUserService.Setup(c => c.UserId).Returns("doc-user-id");
+
+            var doctor = new Doctor { Id = 2, UserId = "doc-user-id" };
+            _mockDoctorRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<Doctor, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<Doctor, object>>[]>()
+            )).ReturnsAsync(doctor);
+
+            var existingMed1 = new PrescribedMedication { Id = 1, SessionId = sessionId, DrugName = "Amoxicillin", Dosage = "250mg" };
+            var existingMed2 = new PrescribedMedication { Id = 2, SessionId = sessionId, DrugName = "UntouchedMed", Dosage = "10mg" };
+            var existingMeds = new List<PrescribedMedication> { existingMed1, existingMed2 };
+
+            _mockPrescribedRepo.Setup(r => r.GetAllAsync(
+                It.IsAny<Expression<Func<PrescribedMedication, bool>>>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<PrescribedMedication, object>>[]>()
+            )).ReturnsAsync(existingMeds);
+
+            _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
+
+            var incomingMeds = new List<PrescribeMedicationRequest>
+            {
+                // Update existing entity 1
+                new PrescribeMedicationRequest { Id = 1, DrugName = "Amoxicillin Updated", Dosage = "500mg", Frequency = "Twice daily" },
+                // Add brand new entity (Id is null)
+                new PrescribeMedicationRequest { Id = null, DrugName = "Panadol", Dosage = "1000mg", Frequency = "Once daily" }
+                // Notice: entity 2 (UntouchedMed) is omitted, and should NOT be deleted
+            };
+
+            var result = await _sessionService.UpdatePrescribedMedicationsAsync(sessionId, incomingMeds);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal(2, result.Data!.Count);
+
+            // Entity 1 was updated in-place
+            Assert.Equal("Amoxicillin Updated", existingMed1.DrugName);
+            Assert.Equal("500mg", existingMed1.Dosage);
+            Assert.Equal("Twice daily", existingMed1.Frequency);
+
+            // DeleteRange should NOT have been called
+            _mockPrescribedRepo.Verify(r => r.DeleteRange(It.IsAny<IEnumerable<PrescribedMedication>>()), Times.Never);
+
+            // New entity was added
+            _mockPrescribedRepo.Verify(r => r.AddRange(It.Is<List<PrescribedMedication>>(l => l.Count == 1 && l[0].DrugName == "Panadol")), Times.Once);
+
+            _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdatePrescribedMedicationsAsync_ShouldReturnNotFound_WhenProvidedIdDoesNotExistInSession()
         {
             var sessionId = 10;
             var session = new ClinicalSession { Id = sessionId, DoctorId = 2, Status = "In Progress" };
@@ -257,7 +320,7 @@ namespace CliniKa.Tests
 
             var existingMeds = new List<PrescribedMedication>
             {
-                new PrescribedMedication { Id = 1, SessionId = sessionId, DrugName = "OldMed" }
+                new PrescribedMedication { Id = 1, SessionId = sessionId, DrugName = "Amoxicillin" }
             };
 
             _mockPrescribedRepo.Setup(r => r.GetAllAsync(
@@ -268,22 +331,131 @@ namespace CliniKa.Tests
                 It.IsAny<Expression<Func<PrescribedMedication, object>>[]>()
             )).ReturnsAsync(existingMeds);
 
-            _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
-
-            var newMeds = new List<PrescribeMedicationRequest>
+            var incomingMeds = new List<PrescribeMedicationRequest>
             {
-                new PrescribeMedicationRequest { DrugName = "Panadol", Dosage = "1000mg", Frequency = "Twice daily" }
+                new PrescribeMedicationRequest { Id = 999, DrugName = "InvalidIdDrug" }
             };
 
-            var result = await _sessionService.UpdatePrescribedMedicationsAsync(sessionId, newMeds);
+            var result = await _sessionService.UpdatePrescribedMedicationsAsync(sessionId, incomingMeds);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(ResultStatus.NotFound, result.Status);
+            Assert.Contains("999", result.Message);
+        }
+
+        [Fact]
+        public async Task UpdatePrescribedMedicationsAsync_ShouldReturnFailure_WhenDuplicateIdsProvided()
+        {
+            var sessionId = 10;
+            var session = new ClinicalSession { Id = sessionId, DoctorId = 2, Status = "In Progress" };
+
+            _mockSessionRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<ClinicalSession, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<ClinicalSession, object>>[]>()
+            )).ReturnsAsync(session);
+
+            _mockCurrentUserService.Setup(c => c.UserId).Returns("doc-user-id");
+
+            var doctor = new Doctor { Id = 2, UserId = "doc-user-id" };
+            _mockDoctorRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<Doctor, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<Doctor, object>>[]>()
+            )).ReturnsAsync(doctor);
+
+            var existingMeds = new List<PrescribedMedication>
+            {
+                new PrescribedMedication { Id = 1, SessionId = sessionId, DrugName = "Amoxicillin" }
+            };
+
+            _mockPrescribedRepo.Setup(r => r.GetAllAsync(
+                It.IsAny<Expression<Func<PrescribedMedication, bool>>>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<PrescribedMedication, object>>[]>()
+            )).ReturnsAsync(existingMeds);
+
+            var incomingMeds = new List<PrescribeMedicationRequest>
+            {
+                new PrescribeMedicationRequest { Id = 1, DrugName = "Amoxicillin 1" },
+                new PrescribeMedicationRequest { Id = 1, DrugName = "Amoxicillin 2" }
+            };
+
+            var result = await _sessionService.UpdatePrescribedMedicationsAsync(sessionId, incomingMeds);
+
+            Assert.False(result.IsSuccess);
+            Assert.Contains("Duplicate", result.Message, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public async Task DeletePrescribedMedicationAsync_ShouldReturnNotFound_WhenMedicationDoesNotExistInSession()
+        {
+            var sessionId = 10;
+            var session = new ClinicalSession { Id = sessionId, DoctorId = 2, Status = "In Progress" };
+
+            _mockSessionRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<ClinicalSession, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<ClinicalSession, object>>[]>()
+            )).ReturnsAsync(session);
+
+            _mockCurrentUserService.Setup(c => c.UserId).Returns("doc-user-id");
+
+            var doctor = new Doctor { Id = 2, UserId = "doc-user-id" };
+            _mockDoctorRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<Doctor, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<Doctor, object>>[]>()
+            )).ReturnsAsync(doctor);
+
+            _mockPrescribedRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<PrescribedMedication, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<PrescribedMedication, object>>[]>()
+            )).ReturnsAsync((PrescribedMedication?)null);
+
+            var result = await _sessionService.DeletePrescribedMedicationAsync(sessionId, 999);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(ResultStatus.NotFound, result.Status);
+        }
+
+        [Fact]
+        public async Task DeletePrescribedMedicationAsync_ShouldDeleteAndSave_WhenSuccessful()
+        {
+            var sessionId = 10;
+            var session = new ClinicalSession { Id = sessionId, DoctorId = 2, Status = "In Progress" };
+
+            _mockSessionRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<ClinicalSession, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<ClinicalSession, object>>[]>()
+            )).ReturnsAsync(session);
+
+            _mockCurrentUserService.Setup(c => c.UserId).Returns("doc-user-id");
+
+            var doctor = new Doctor { Id = 2, UserId = "doc-user-id" };
+            _mockDoctorRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<Doctor, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<Doctor, object>>[]>()
+            )).ReturnsAsync(doctor);
+
+            var medication = new PrescribedMedication { Id = 5, SessionId = sessionId, DrugName = "Aspirin" };
+            _mockPrescribedRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<PrescribedMedication, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<PrescribedMedication, object>>[]>()
+            )).ReturnsAsync(medication);
+
+            _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
+
+            var result = await _sessionService.DeletePrescribedMedicationAsync(sessionId, 5);
 
             Assert.True(result.IsSuccess);
-            Assert.Single(result.Data!);
-            Assert.Equal("Panadol", result.Data![0].DrugName);
-            Assert.Equal("1000mg", result.Data![0].Dosage);
-
-            _mockPrescribedRepo.Verify(r => r.DeleteRange(existingMeds), Times.Once);
-            _mockPrescribedRepo.Verify(r => r.AddRange(It.Is<List<PrescribedMedication>>(l => l.Count == 1 && l[0].DrugName == "Panadol")), Times.Once);
+            _mockPrescribedRepo.Verify(r => r.Delete(medication), Times.Once);
             _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
         }
     }
