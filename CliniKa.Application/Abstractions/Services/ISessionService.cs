@@ -40,5 +40,7 @@ namespace CliniKa.Application.Abstractions.Services
         Task<GeneralResult> DeletePrescribedMedicationAsync(int sessionId, int medicationId);
 
         Task<GeneralResult<List<DoctorSessionReportDto>>> GetDoctorReportsAsync(string? searchTerm = null);
+
+        Task<GeneralResult<string>> FinalizeTreatmentAsync(int sessionId);
     }
 }

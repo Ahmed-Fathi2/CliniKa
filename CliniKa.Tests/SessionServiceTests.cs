@@ -17,6 +17,7 @@ namespace CliniKa.Tests
         private readonly Mock<IClinicalSessionRepository> _mockSessionRepo;
         private readonly Mock<IDoctorRepository> _mockDoctorRepo;
         private readonly Mock<IPrescribedMedicationsRepository> _mockPrescribedRepo;
+        private readonly Mock<IActiveMedicationsRepository> _mockActiveMedicationsRepo;
         private readonly Mock<ILangFlowService> _mockLangFlowService;
         private readonly Mock<IFileService> _mockFileService;
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
@@ -28,6 +29,7 @@ namespace CliniKa.Tests
             _mockSessionRepo = new Mock<IClinicalSessionRepository>();
             _mockDoctorRepo = new Mock<IDoctorRepository>();
             _mockPrescribedRepo = new Mock<IPrescribedMedicationsRepository>();
+            _mockActiveMedicationsRepo = new Mock<IActiveMedicationsRepository>();
             _mockLangFlowService = new Mock<ILangFlowService>();
             _mockFileService = new Mock<IFileService>();
             _mockUnitOfWork = new Mock<IUnitOfWork>();
@@ -36,6 +38,7 @@ namespace CliniKa.Tests
             _mockUnitOfWork.Setup(u => u.ClinicalSessions).Returns(_mockSessionRepo.Object);
             _mockUnitOfWork.Setup(u => u.Doctors).Returns(_mockDoctorRepo.Object);
             _mockUnitOfWork.Setup(u => u.PrescribedMedications).Returns(_mockPrescribedRepo.Object);
+            _mockUnitOfWork.Setup(u => u.ActiveMedications).Returns(_mockActiveMedicationsRepo.Object);
 
             _sessionService = new SessionService(
                 _mockLangFlowService.Object,
@@ -456,6 +459,117 @@ namespace CliniKa.Tests
 
             Assert.True(result.IsSuccess);
             _mockPrescribedRepo.Verify(r => r.Delete(medication), Times.Once);
+            _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task FinalizeTreatmentAsync_ShouldReturnNotFound_WhenSessionDoesNotExist()
+        {
+            _mockSessionRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<ClinicalSession, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<ClinicalSession, object>>[]>()
+            )).ReturnsAsync((ClinicalSession?)null);
+
+            var result = await _sessionService.FinalizeTreatmentAsync(999);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(ResultStatus.NotFound, result.Status);
+        }
+
+        [Fact]
+        public async Task FinalizeTreatmentAsync_ShouldReturnFailure_WhenDoctorNotAuthorized()
+        {
+            var session = new ClinicalSession { Id = 1, DoctorId = 5, Status = "In Progress" };
+            _mockSessionRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<ClinicalSession, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<ClinicalSession, object>>[]>()
+            )).ReturnsAsync(session);
+
+            _mockCurrentUserService.Setup(c => c.UserId).Returns("other-doctor-user-id");
+
+            var doctor = new Doctor { Id = 99, UserId = "other-doctor-user-id" };
+            _mockDoctorRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<Doctor, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<Doctor, object>>[]>()
+            )).ReturnsAsync(doctor);
+
+            var result = await _sessionService.FinalizeTreatmentAsync(1);
+
+            Assert.False(result.IsSuccess);
+            Assert.Contains("not authorized", result.Message, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public async Task FinalizeTreatmentAsync_ShouldPersistPrescribedMedsToActiveMedicationsAndCompleteSession()
+        {
+            var sessionId = 10;
+            var patientId = 3;
+            var session = new ClinicalSession
+            {
+                Id = sessionId,
+                PatientId = patientId,
+                DoctorId = 2,
+                Status = "In Progress",
+                PrescribedMedications = new List<PrescribedMedication>
+                {
+                    new PrescribedMedication { Id = 1, SessionId = sessionId, DrugName = "Metformin", Dosage = "500mg", Frequency = "Twice daily" },
+                    new PrescribedMedication { Id = 2, SessionId = sessionId, DrugName = "Aspirin", Dosage = "81mg", Frequency = "Once daily" }
+                }
+            };
+
+            _mockSessionRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<ClinicalSession, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<ClinicalSession, object>>[]>()
+            )).ReturnsAsync(session);
+
+            _mockCurrentUserService.Setup(c => c.UserId).Returns("doc-user-id");
+
+            var doctor = new Doctor { Id = 2, UserId = "doc-user-id" };
+            _mockDoctorRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<Doctor, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<Doctor, object>>[]>()
+            )).ReturnsAsync(doctor);
+
+            var existingActiveMed = new ActiveMedication
+            {
+                Id = 100,
+                PatientId = patientId,
+                DrugName = "Metformin",
+                Dosage = "250mg",
+                Frequency = "Once daily"
+            };
+
+            _mockActiveMedicationsRepo.Setup(r => r.GetAllAsync(
+                It.IsAny<Expression<Func<ActiveMedication, bool>>>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<ActiveMedication, object>>[]>()
+            )).ReturnsAsync(new List<ActiveMedication> { existingActiveMed });
+
+            _mockUnitOfWork.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
+
+            var result = await _sessionService.FinalizeTreatmentAsync(sessionId);
+
+            Assert.True(result.IsSuccess);
+            Assert.Equal("Completed", session.Status);
+            Assert.NotNull(session.FinalizedAt);
+
+            // Existing Metformin active medication should be updated with new dosage/frequency
+            Assert.Equal("500mg", existingActiveMed.Dosage);
+            Assert.Equal("Twice daily", existingActiveMed.Frequency);
+            Assert.Equal(sessionId, existingActiveMed.SourceSessionId);
+
+            // Brand new Aspirin active medication should be added
+            _mockActiveMedicationsRepo.Verify(r => r.AddRange(It.Is<List<ActiveMedication>>(
+                list => list.Count == 1 && list[0].DrugName == "Aspirin" && list[0].PatientId == patientId
+            )), Times.Once);
+
             _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
         }
     }

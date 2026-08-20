@@ -643,6 +643,96 @@ namespace CliniKa.Application.Services
             return GeneralResult.Success("Prescribed medication deleted successfully.");
         }
 
+        /// <inheritdoc />
+        public async Task<GeneralResult<string>> FinalizeTreatmentAsync(int sessionId)
+        {
+            // 1. Validate session exists
+            var session = await _unitOfWork.ClinicalSessions.GetAsync(
+                s => s.Id == sessionId,
+                trackChanges: true,
+                s => s.PrescribedMedications);
+
+            if (session == null)
+            {
+                return GeneralResult<string>.NotFound(
+                    $"Clinical Session with ID '{sessionId}' was not found.");
+            }
+
+            // 2. Verify the authenticated user is the doctor who owns this session
+            var userId = _currentUserService.UserId;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return GeneralResult<string>.Failure("User is not authenticated.");
+            }
+
+            var doctor = await _unitOfWork.Doctors.GetAsync(d => d.UserId == userId);
+            if (doctor == null || doctor.Id != session.DoctorId)
+            {
+                return GeneralResult<string>.Failure(
+                    "You are not Session's Doctor, so you are not authorized to finalize treatment for this session.");
+            }
+
+            // 3. Load prescribed medications
+            var prescribedMeds = session.PrescribedMedications?.ToList() ?? new List<PrescribedMedication>();
+
+            if (prescribedMeds.Count > 0)
+            {
+                // 4. Load existing active medications for the patient (tracked)
+                var existingActiveMeds = (await _unitOfWork.ActiveMedications.GetAllAsync(
+                    filter: m => m.PatientId == session.PatientId && (m.EndDate == null || m.EndDate.Value.Date >= DateTime.UtcNow.Date),
+                    trackChanges: true)).ToList();
+
+                var existingActiveDict = existingActiveMeds
+                    .GroupBy(m => m.DrugName.Trim().ToLower())
+                    .ToDictionary(g => g.Key, g => g.First());
+
+                var newActiveMeds = new List<ActiveMedication>();
+
+                foreach (var pres in prescribedMeds)
+                {
+                    var drugKey = pres.DrugName.Trim().ToLower();
+                    if (existingActiveDict.TryGetValue(drugKey, out var activeEntity))
+                    {
+                        // Update existing active medication
+                        activeEntity.Dosage = pres.Dosage?.Trim();
+                        activeEntity.Frequency = pres.Frequency?.Trim();
+                        activeEntity.StartDate = DateTime.UtcNow;
+                        activeEntity.SourceSessionId = session.Id;
+                    }
+                    else
+                    {
+                        // Insert new active medication
+                        var newActive = new ActiveMedication
+                        {
+                            PatientId = session.PatientId,
+                            DrugName = pres.DrugName.Trim(),
+                            Dosage = pres.Dosage?.Trim(),
+                            Frequency = pres.Frequency?.Trim(),
+                            StartDate = DateTime.UtcNow,
+                            SourceSessionId = session.Id
+                        };
+                        newActiveMeds.Add(newActive);
+                        existingActiveDict[drugKey] = newActive;
+                    }
+                }
+
+                if (newActiveMeds.Count > 0)
+                {
+                    _unitOfWork.ActiveMedications.AddRange(newActiveMeds);
+                }
+            }
+
+            // 5. Update session status
+            session.Status = "Completed";
+            session.FinalizedAt = DateTime.UtcNow;
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return GeneralResult<string>.Success(
+                "Treatment finalized successfully. Prescriptions added to active medications.",
+                "Success");
+        }
+
         private void RegisterUploadedDocuments(
             ClinicalSession session,
             List<(IFormFile File, string SavedUrl)> uploadedDocs)

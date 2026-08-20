@@ -230,8 +230,13 @@ namespace CliniKa.Presentation.Controllers
             return BadRequest(result);
         }
 
-        [HttpPost("{sessionId}/trigger-interaction-check")]
-        public async Task<IActionResult> TriggerInteractionCheck(int sessionId)
+        /// <summary>
+        /// Triggers AI Drug-Drug Conflict Analysis between prescribed medications and active medications for a session.
+        /// The interaction-check itself does not modify active medications.
+        /// </summary>
+        [HttpPost("{sessionId:int}/trigger-interaction-check")]
+        [Authorize(Roles = RoleConstants.Doctor)]
+        public async Task<IActionResult> TriggerInteractionCheck([FromRoute] int sessionId)
         {
             var payloadResult = await _sessionService.GetWorkflowPayloadAsync(sessionId);
 
@@ -244,6 +249,26 @@ namespace CliniKa.Presentation.Controllers
                 return Ok(workflowResult);
 
             return StatusCode(500, workflowResult.Message);
+        }
+
+        /// <summary>
+        /// Finalizes the treatment plan for a clinical session:
+        /// Persists prescribed medications into the patient's ActiveMedications table
+        /// and marks the session status as Completed.
+        /// </summary>
+        [HttpPost("{sessionId:int}/finalize-treatment")]
+        [Authorize(Roles = RoleConstants.Doctor)]
+        public async Task<IActionResult> FinalizeTreatment([FromRoute] int sessionId)
+        {
+            var result = await _sessionService.FinalizeTreatmentAsync(sessionId);
+
+            if (result.IsSuccess)
+                return Ok(result);
+
+            if (result.Status == ResultStatus.NotFound)
+                return NotFound(result);
+
+            return BadRequest(result);
         }
 
         /// <summary>
