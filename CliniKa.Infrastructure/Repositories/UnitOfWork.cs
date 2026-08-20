@@ -18,6 +18,8 @@ namespace CliniKa.Infrastructure.Repositories
         public IActiveMedicationsRepository ActiveMedications { get; }
 
         public ISessionAIReportsRepository SessionAIReports { get; }
+        public ISessionDifferentialDiagnosisRepository SessionDifferentialDiagnoses { get; }
+        public ISessionRecommendedInvestigationRepository SessionRecommendedInvestigations { get; }
 
         public IChatSessionRepository ChatSessions { get; }
 
@@ -34,6 +36,8 @@ namespace CliniKa.Infrastructure.Repositories
             IPrescribedMedicationsRepository prescribedMedications,
             IDoctorRepository doctors,
             ISessionAIReportsRepository sessionAIReports,
+            ISessionDifferentialDiagnosisRepository sessionDifferentialDiagnoses,
+            ISessionRecommendedInvestigationRepository sessionRecommendedInvestigations,
             IChatSessionRepository chatSessions,
             IDiseaseRepository diseases,
             IAllergyRepository allergies,
@@ -46,6 +50,8 @@ namespace CliniKa.Infrastructure.Repositories
             PrescribedMedications = prescribedMedications;
             Doctors = doctors;
             SessionAIReports = sessionAIReports;
+            SessionDifferentialDiagnoses = sessionDifferentialDiagnoses;
+            SessionRecommendedInvestigations = sessionRecommendedInvestigations;
             ChatSessions = chatSessions;
             Diseases = diseases;
             Allergies = allergies;

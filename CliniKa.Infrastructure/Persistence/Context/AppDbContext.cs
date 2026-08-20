@@ -23,6 +23,8 @@ namespace CliniKa.Infrastructure.Persistence.Context
         public DbSet<ActiveMedication> ActiveMedications => Set<ActiveMedication>();
         public DbSet<PrescribedMedication> PrescribedMedications => Set<PrescribedMedication>();
         public DbSet<SessionFinding> SessionFindings => Set<SessionFinding>();
+        public DbSet<SessionDifferentialDiagnosis> SessionDifferentialDiagnoses => Set<SessionDifferentialDiagnosis>();
+        public DbSet<SessionRecommendedInvestigation> SessionRecommendedInvestigations => Set<SessionRecommendedInvestigation>();
         public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
 
         protected override void OnModelCreating(ModelBuilder builder)

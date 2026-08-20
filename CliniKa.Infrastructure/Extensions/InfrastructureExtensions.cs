@@ -81,6 +81,8 @@ namespace CliniKa.Infrastructure.Extensions
             services.AddScoped<IPrescribedMedicationsRepository, PrescribedMedicationsRepository>();
             services.AddScoped<IActiveMedicationsRepository, ActiveMedicationsRepository>();
             services.AddScoped<ISessionAIReportsRepository, SessionAIReportsRepository>();
+            services.AddScoped<ISessionDifferentialDiagnosisRepository, SessionDifferentialDiagnosisRepository>();
+            services.AddScoped<ISessionRecommendedInvestigationRepository, SessionRecommendedInvestigationRepository>();
             services.AddScoped<IChatSessionRepository, ChatSessionRepository>();
             services.AddScoped<IDiseaseRepository, DiseaseRepository>();
             services.AddScoped<IAllergyRepository, AllergyRepository>();
