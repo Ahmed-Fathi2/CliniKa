@@ -174,15 +174,15 @@ namespace CliniKa.Application.Services
             var session = await _unitOfWork.ClinicalSessions.GetAsync(
                 s => s.Id == sessionId,
                 trackChanges: true,
-                s => s.SessionAiReport);
+                s => s.SessionAiReport,
+                s => s.DifferentialDiagnoses,
+                s => s.RecommendedInvestigations);
 
             if (session == null)
             {
                 return GeneralResult<string>.NotFound("Clinical Session not found.");
             }
 
-            session.AudioTranscript = result.Body?.Transcript ?? string.Empty;
-            session.ExtractedSymptoms = result.Body?.ChiefComplaint ?? string.Empty;
             session.Status = "Completed";
 
             var aiReport = session.SessionAiReport;
@@ -196,23 +196,88 @@ namespace CliniKa.Application.Services
                 session.SessionAiReport = aiReport;
             }
 
-            aiReport.PatientSummary = result.Body?.HistoryOfPresentIllness ?? string.Empty;
-            
-            aiReport.PossibleDiagnoses = result.Body?.PossibleDiagnosis ?? 
-                (result.Body?.Top5DifferentialDiagnoses != null ? string.Join(", ", result.Body.Top5DifferentialDiagnoses) : string.Empty);
-            
-            var investigations = new List<string>();
-            if (!string.IsNullOrEmpty(result.Body?.CompleteFindingsFromAllMedicalImages))
+            // Columns matching incoming request
+            aiReport.Transcript = result.Body?.Transcript;
+            aiReport.Analysis = result.Body?.Analysis;
+            aiReport.ChiefComplaint = result.Body?.ChiefComplaint;
+            aiReport.HistoryOfPresentIllness = result.Body?.HistoryOfPresentIllness;
+            aiReport.CompleteFindingsFromAllMedicalImages = result.Body?.CompleteFindingsFromAllMedicalImages;
+            aiReport.PossibleDiagnosis = result.Body?.PossibleDiagnosis;
+            aiReport.ImmediateManagement = result.Body?.ImmediateManagement;
+            aiReport.ImagesReceived = result.Body?.ImagesReceived;
+            aiReport.GeneratedAt = DateTime.UtcNow;
+
+            // 1. Save Top 5 Differential Diagnoses into individual rows
+            var existingDiffs = await _unitOfWork.SessionDifferentialDiagnoses.GetAllAsync(
+                filter: d => d.SessionId == sessionId,
+                sortBy: null,
+                isDescending: false,
+                trackChanges: true);
+
+            if (existingDiffs != null && existingDiffs.Any())
             {
-                investigations.Add(result.Body.CompleteFindingsFromAllMedicalImages);
+                _unitOfWork.SessionDifferentialDiagnoses.DeleteRange(existingDiffs);
             }
-            if (result.Body?.RecommendedInvestigations != null)
+
+            if (result.Body?.Top5DifferentialDiagnoses != null && result.Body.Top5DifferentialDiagnoses.Any())
             {
-                investigations.AddRange(result.Body.RecommendedInvestigations);
+                var diffEntities = new List<SessionDifferentialDiagnosis>();
+                for (int i = 0; i < result.Body.Top5DifferentialDiagnoses.Count; i++)
+                {
+                    var diag = result.Body.Top5DifferentialDiagnoses[i];
+                    if (!string.IsNullOrWhiteSpace(diag))
+                    {
+                        diffEntities.Add(new SessionDifferentialDiagnosis
+                        {
+                            SessionId = sessionId,
+                            Diagnosis = diag.Trim(),
+                            Rank = i + 1,
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+
+                if (diffEntities.Count > 0)
+                {
+                    _unitOfWork.SessionDifferentialDiagnoses.AddRange(diffEntities);
+                }
             }
-            aiReport.SuggestedInvestigations = string.Join("; ", investigations);
-            
-            aiReport.ClinicalAlerts = result.Body?.ImmediateManagement ?? string.Empty;
+
+            // 2. Save Recommended Investigations into individual rows
+            var existingInvestigations = await _unitOfWork.SessionRecommendedInvestigations.GetAllAsync(
+                filter: ri => ri.SessionId == sessionId,
+                sortBy: null,
+                isDescending: false,
+                trackChanges: true);
+
+            if (existingInvestigations != null && existingInvestigations.Any())
+            {
+                _unitOfWork.SessionRecommendedInvestigations.DeleteRange(existingInvestigations);
+            }
+
+            if (result.Body?.RecommendedInvestigations != null && result.Body.RecommendedInvestigations.Any())
+            {
+                var investigationEntities = new List<SessionRecommendedInvestigation>();
+                for (int i = 0; i < result.Body.RecommendedInvestigations.Count; i++)
+                {
+                    var inv = result.Body.RecommendedInvestigations[i];
+                    if (!string.IsNullOrWhiteSpace(inv))
+                    {
+                        investigationEntities.Add(new SessionRecommendedInvestigation
+                        {
+                            SessionId = sessionId,
+                            Investigation = inv.Trim(),
+                            Order = i + 1,
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+
+                if (investigationEntities.Count > 0)
+                {
+                    _unitOfWork.SessionRecommendedInvestigations.AddRange(investigationEntities);
+                }
+            }
 
             await _unitOfWork.SaveChangesAsync();
 
@@ -223,7 +288,10 @@ namespace CliniKa.Application.Services
 
         public async Task<GeneralResult<WorkflowSessionPayloadDto>> GetWorkflowPayloadAsync(int sessionId)
         {
-            var session = await _unitOfWork.ClinicalSessions.GetAsync(s => s.Id == sessionId,false);
+            var session = await _unitOfWork.ClinicalSessions.GetAsync(
+                s => s.Id == sessionId,
+                trackChanges: false,
+                s => s.SessionAiReport);
 
             if (session == null)
                 return GeneralResult<WorkflowSessionPayloadDto>.Failure("Session not found");
@@ -246,68 +314,71 @@ namespace CliniKa.Application.Services
 
             var currentMedicationsDto = activeMedications.Select(m => m.DrugName).ToList();
 
-            var aiReport = await _unitOfWork.SessionAIReports.GetAsync(r => r.SessionId == sessionId, trackChanges: false);
-
             var payload = new WorkflowSessionPayloadDto
             {
                 SessionId = session.Id,
                 PatientId = session.PatientId,
                 PatientName = patient?.FullName,
-                AudioTranscript = session.AudioTranscript,
+                AudioTranscript = session.SessionAiReport?.Transcript,
                 NewMedications = newMedicationsDto,
                 CurrentMedications = currentMedicationsDto,
-                PossibleDiagnoses = aiReport?.PossibleDiagnoses
+                PossibleDiagnoses = session.SessionAiReport?.PossibleDiagnosis
             };
 
             return GeneralResult<WorkflowSessionPayloadDto>.Success(payload);
         }
 
-        public async Task<GeneralResult<SessionDiagnosisResultDto>> GetSessionDiagnosisAsync(int sessionId)
+        public async Task<GeneralResult<LangFlowDiagnosisResult>> GetSessionDiagnosisAsync(int sessionId)
         {
             var session = await _unitOfWork.ClinicalSessions.GetAsync(
                 s => s.Id == sessionId,
                 trackChanges: false,
-                s => s.SessionAiReport,
-                s => s.Patient,
-                s => s.PrescribedMedications);
+                s => s.SessionAiReport);
 
             if (session == null)
             {
-                return GeneralResult<SessionDiagnosisResultDto>.NotFound($"Clinical Session with ID '{sessionId}' was not found.");
+                return GeneralResult<LangFlowDiagnosisResult>.NotFound($"Clinical Session with ID '{sessionId}' was not found.");
             }
 
-            var prescribedMedDtos = session.PrescribedMedications?.Select(m => new PrescribedMedicationDto
-            {
-                Id = m.Id,
-                DrugName = m.DrugName,
-                Dosage = m.Dosage,
-                Frequency = m.Frequency,
-                Duration = m.Duration,
-                Notes = m.Notes
-            }).ToList() ?? new List<PrescribedMedicationDto>();
+            var aiReport = session.SessionAiReport;
 
-            var resultDto = new SessionDiagnosisResultDto
+            // Load differential diagnoses ordered by Rank (the 5 rows in database via index)
+            var diffs = await _unitOfWork.SessionDifferentialDiagnoses.GetAllAsync(
+                filter: d => d.SessionId == sessionId,
+                sortBy: "Rank",
+                isDescending: false,
+                trackChanges: false);
+
+            var top5List = diffs?.Select(d => d.Diagnosis).ToList() ?? new List<string>();
+
+            // Load recommended investigations ordered by Order (separate rows in database via index)
+            var investigations = await _unitOfWork.SessionRecommendedInvestigations.GetAllAsync(
+                filter: ri => ri.SessionId == sessionId,
+                sortBy: "Order",
+                isDescending: false,
+                trackChanges: false);
+
+            var recommendedList = investigations?.Select(ri => ri.Investigation).ToList() ?? new List<string>();
+
+            var responseResult = new LangFlowDiagnosisResult
             {
-                SessionId = session.Id,
-                PatientId = session.PatientId,
-                PatientName = session.Patient != null ? session.Patient.FullName : string.Empty,
-                PatientGender = session.Patient?.Gender,
-                VisitDate = session.VisitDate,
-                Status = session.Status,
-                AudioTranscript = session.AudioTranscript,
-                ExtractedSymptoms = session.ExtractedSymptoms,
-                FinalDiagnosis = session.FinalDiagnosis,
-                PatientSummary = session.SessionAiReport?.PatientSummary,
-                PossibleDiagnoses = session.SessionAiReport?.PossibleDiagnoses,
-                DrugInteractions = session.SessionAiReport?.DrugInteractions,
-                Contraindications = session.SessionAiReport?.Contraindications,
-                SuggestedInvestigations = session.SessionAiReport?.SuggestedInvestigations,
-                ClinicalAlerts = session.SessionAiReport?.ClinicalAlerts,
-                GeneratedAt = session.SessionAiReport?.GeneratedAt,
-                PrescribedMedications = prescribedMedDtos
+                Status = 200,
+                Body = new LangFlowDiagnosisResultBody
+                {
+                    Transcript = aiReport?.Transcript,
+                    Analysis = aiReport?.Analysis,
+                    ChiefComplaint = aiReport?.ChiefComplaint,
+                    HistoryOfPresentIllness = aiReport?.HistoryOfPresentIllness,
+                    CompleteFindingsFromAllMedicalImages = aiReport?.CompleteFindingsFromAllMedicalImages,
+                    PossibleDiagnosis = aiReport?.PossibleDiagnosis,
+                    Top5DifferentialDiagnoses = top5List,
+                    RecommendedInvestigations = recommendedList,
+                    ImmediateManagement = aiReport?.ImmediateManagement,
+                    ImagesReceived = aiReport?.ImagesReceived
+                }
             };
 
-            return GeneralResult<SessionDiagnosisResultDto>.Success(resultDto, "Diagnosis result retrieved successfully.");
+            return GeneralResult<LangFlowDiagnosisResult>.Success(responseResult, "Diagnosis result retrieved successfully.");
         }
 
         /// <inheritdoc />
@@ -343,7 +414,7 @@ namespace CliniKa.Application.Services
                     s.Id.ToString().Contains(term) ||
                     (s.Patient != null && s.Patient.FullName.ToLower().Contains(term)) ||
                     (s.FinalDiagnosis != null && s.FinalDiagnosis.ToLower().Contains(term)) ||
-                    (s.SessionAiReport != null && s.SessionAiReport.PossibleDiagnoses != null && s.SessionAiReport.PossibleDiagnoses.ToLower().Contains(term)));
+                    (s.SessionAiReport != null && s.SessionAiReport.PossibleDiagnosis != null && s.SessionAiReport.PossibleDiagnosis.ToLower().Contains(term)));
             }
 
             var resultDtos = query.Select(s => new DoctorSessionReportDto
@@ -356,8 +427,8 @@ namespace CliniKa.Application.Services
                 VisitDate = s.VisitDate,
                 Status = s.Status,
                 FinalDiagnosis = s.FinalDiagnosis,
-                PossibleDiagnoses = s.SessionAiReport?.PossibleDiagnoses,
-                PatientSummary = s.SessionAiReport?.PatientSummary,
+                PossibleDiagnosis = s.SessionAiReport?.PossibleDiagnosis,
+                HistoryOfPresentIllness = s.SessionAiReport?.HistoryOfPresentIllness,
                 HasAiReport = s.SessionAiReport != null,
                 PrescribedMedicationsCount = s.PrescribedMedications?.Count ?? 0
             }).ToList();
