@@ -6,12 +6,15 @@ namespace CliniKa.Domain.Entities
     {
         public int Id { get; set; }
         public int SessionId { get; set; }
-        public string? PatientSummary { get; set; }
-        public string? PossibleDiagnoses { get; set; }
-        public string? DrugInteractions { get; set; }
-        public string? Contraindications { get; set; }
-        public string? SuggestedInvestigations { get; set; }
-        public string? ClinicalAlerts { get; set; }
+
+        public string? Transcript { get; set; }
+        public string? Analysis { get; set; }
+        public string? ChiefComplaint { get; set; }
+        public string? HistoryOfPresentIllness { get; set; }
+        public string? CompleteFindingsFromAllMedicalImages { get; set; }
+        public string? PossibleDiagnosis { get; set; }
+        public string? ImmediateManagement { get; set; }
+        public int? ImagesReceived { get; set; }
         public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
