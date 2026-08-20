@@ -9,6 +9,7 @@ namespace CliniKa.Application.Abstraction
         Task<GeneralResult> AddMedicalInfoAsync(AddMedicalInfoRequest request);
         Task<GeneralResult> UpdateMedicalInfoAsync(AddMedicalInfoRequest request);
         Task<GeneralResult<PatientProfileDto>> GetPatientProfileAsync();
+        Task<GeneralResult<PatientPersonalInfoDto>> UpdatePatientPersonalInfoAsync(UpdatePatientPersonalInfoRequest request);
         Task<GeneralResult<PatientMedicalDataDto>> GetPatientMedicalDataAsync();
         Task<GeneralResult<IEnumerable<PatientSessionDto>>> GetPatientSessionsAsync();
         Task<GeneralResult<PatientSessionDetailsDto>> GetPatientSessionDetailsAsync(int sessionId);

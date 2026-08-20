@@ -12,17 +12,20 @@ namespace CliniKa.Application.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IValidator<AddMedicalInfoRequest> _addMedicalInfoValidator;
+        private readonly IValidator<UpdatePatientPersonalInfoRequest> _updatePersonalInfoValidator;
         private readonly ICurrentUserService _currentUserService;
         private readonly IUserService _userService;
 
         public PatientService(
             IUnitOfWork unitOfWork,
             IValidator<AddMedicalInfoRequest> addMedicalInfoValidator,
+            IValidator<UpdatePatientPersonalInfoRequest> updatePersonalInfoValidator,
             ICurrentUserService currentUserService,
             IUserService userService)
         {
             _unitOfWork = unitOfWork;
             _addMedicalInfoValidator = addMedicalInfoValidator;
+            _updatePersonalInfoValidator = updatePersonalInfoValidator;
             _currentUserService = currentUserService;
             _userService = userService;
         }
@@ -394,6 +397,57 @@ namespace CliniKa.Application.Services
             };
 
             return GeneralResult<PatientProfileDto>.Success(profileDto, "Patient profile retrieved successfully.");
+        }
+
+        public async Task<GeneralResult<PatientPersonalInfoDto>> UpdatePatientPersonalInfoAsync(UpdatePatientPersonalInfoRequest request)
+        {
+            // 1. Validate request
+            var validationResult = await _updatePersonalInfoValidator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                var errors = validationResult.ToDictionary().ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                return GeneralResult<PatientPersonalInfoDto>.ValidationFailure(errors);
+            }
+
+            // 2. Get authenticated user ID
+            var userId = _currentUserService.UserId;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return GeneralResult<PatientPersonalInfoDto>.Failure("User is not authenticated.");
+            }
+
+            // 3. Update User Identity record (FirstName, LastName, PhoneNumber)
+            var userUpdateResult = await _userService.UpdateUserProfileAsync(
+                userId,
+                request.FirstName,
+                request.LastName,
+                request.PhoneNumber);
+
+            if (!userUpdateResult.IsSuccess || userUpdateResult.Data == null)
+            {
+                return GeneralResult<PatientPersonalInfoDto>.Failure(userUpdateResult.Message);
+            }
+
+            var userDto = userUpdateResult.Data;
+
+            // 4. Update Patient FullName in Patient entity if exists
+            var patient = await _unitOfWork.Patient.GetAsync(p => p.UserId == userId, trackChanges: true);
+            if (patient != null)
+            {
+                patient.FullName = $"{request.FirstName.Trim()} {request.LastName.Trim()}";
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            // 5. Construct personal info DTO
+            var personalInfoDto = new PatientPersonalInfoDto
+            {
+                FirstName = userDto.FirstName,
+                LastName = userDto.LastName,
+                Email = userDto.Email,
+                PhoneNumber = userDto.PhoneNumber ?? string.Empty
+            };
+
+            return GeneralResult<PatientPersonalInfoDto>.Success(personalInfoDto, "Personal information updated successfully.");
         }
 
         public async Task<GeneralResult<PatientMedicalDataDto>> GetPatientMedicalDataAsync()
