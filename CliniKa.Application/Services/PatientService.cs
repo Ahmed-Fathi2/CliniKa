@@ -229,6 +229,138 @@ namespace CliniKa.Application.Services
             return GeneralResult.Success("Medical information added successfully.");
         }
 
+        public async Task<GeneralResult> UpdateMedicalInfoAsync(AddMedicalInfoRequest request)
+        {
+            // 1. Validate request
+            var validationResult = await _addMedicalInfoValidator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                var errors = validationResult.ToDictionary().ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                return GeneralResult.ValidationFailure(errors);
+            }
+
+            // 2. Get authenticated user ID from Token
+            var userId = _currentUserService.UserId;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return GeneralResult.Failure("User is not authenticated.");
+            }
+
+            // 3. Find patient linked to the authenticated user with tracked collections
+            var patient = await _unitOfWork.Patient.GetAsync(
+                p => p.UserId == userId, 
+                trackChanges: true,
+                p => p.PatientDiseases,
+                p => p.PatientAllergies,
+                p => p.ActiveMedications);
+
+            if (patient == null)
+            {
+                return GeneralResult.NotFound("Patient profile not found for the authenticated user.");
+            }
+
+            int patientId = patient.Id;
+
+            // 4. Validate existence of referenced DiseaseIds (if provided)
+            if (request.Diseases != null && request.Diseases.Any())
+            {
+                foreach (var d in request.Diseases)
+                {
+                    if (d.DiseaseId.HasValue)
+                    {
+                        var diseaseExists = await _unitOfWork.Diseases.GetByIdAsync(d.DiseaseId.Value);
+                        if (diseaseExists == null)
+                        {
+                            return GeneralResult.NotFound($"Disease with ID '{d.DiseaseId.Value}' was not found.");
+                        }
+                    }
+                }
+            }
+
+            // 5. Validate existence of referenced AllergyIds (if provided)
+            if (request.Allergies != null && request.Allergies.Any())
+            {
+                foreach (var a in request.Allergies)
+                {
+                    if (a.AllergyId.HasValue)
+                    {
+                        var allergyExists = await _unitOfWork.Allergies.GetByIdAsync(a.AllergyId.Value);
+                        if (allergyExists == null)
+                        {
+                            return GeneralResult.NotFound($"Allergy with ID '{a.AllergyId.Value}' was not found.");
+                        }
+                    }
+                }
+            }
+
+            // 6. Update basic medical fields & national ID (overwrite if provided)
+            if (!string.IsNullOrWhiteSpace(request.Gender))
+                patient.Gender = request.Gender;
+
+            if (!string.IsNullOrWhiteSpace(request.BloodType))
+                patient.BloodType = request.BloodType;
+
+            if (!string.IsNullOrWhiteSpace(request.NationalId))
+                patient.NationalId = request.NationalId;
+
+            if (request.DateOfBirth.HasValue)
+                patient.DateOfBirth = request.DateOfBirth;
+
+            // 7. Update diseases (replace existing with updated list)
+            if (request.Diseases != null)
+            {
+                patient.PatientDiseases.Clear();
+                foreach (var d in request.Diseases)
+                {
+                    patient.PatientDiseases.Add(new PatientDisease
+                    {
+                        PatientId = patientId,
+                        DiseaseId = d.DiseaseId,
+                        RawDiseaseName = d.DiseaseId.HasValue ? null : d.RawDiseaseName,
+                        DiagnosedDate = d.DiagnosedDate ?? DateTime.UtcNow
+                    });
+                }
+            }
+
+            // 8. Update allergies (replace existing with updated list)
+            if (request.Allergies != null)
+            {
+                patient.PatientAllergies.Clear();
+                foreach (var a in request.Allergies)
+                {
+                    patient.PatientAllergies.Add(new PatientAllergy
+                    {
+                        PatientId = patientId,
+                        AllergyId = a.AllergyId,
+                        RawAllergenName = a.AllergyId.HasValue ? null : a.RawAllergenName,
+                        Severity = a.Severity
+                    });
+                }
+            }
+
+            // 9. Update medications (replace existing with updated list)
+            if (request.Medications != null)
+            {
+                patient.ActiveMedications.Clear();
+                foreach (var m in request.Medications)
+                {
+                    patient.ActiveMedications.Add(new ActiveMedication
+                    {
+                        PatientId = patientId,
+                        DrugName = m.DrugName,
+                        Dosage = m.Dosage,
+                        Frequency = m.Frequency,
+                        StartDate = DateTime.UtcNow
+                    });
+                }
+            }
+
+            // 10. Persist all changes
+            await _unitOfWork.SaveChangesAsync();
+
+            return GeneralResult.Success("Medical information updated successfully.");
+        }
+
         public async Task<GeneralResult<PatientProfileDto>> GetPatientProfileAsync()
         {
             var userId = _currentUserService.UserId;
@@ -292,7 +424,10 @@ namespace CliniKa.Application.Services
                     Dosage = am.Dosage ?? string.Empty,
                     Frequency = am.Frequency ?? string.Empty,
                     StartDate = am.StartDate.ToString("yyyy-MM-dd"),
-                    EndDate = am.EndDate?.ToString("yyyy-MM-dd") ?? ""
+                    EndDate = am.EndDate?.ToString("yyyy-MM-dd") ?? "",
+                    SourceSessionId = am.SourceSessionId,
+                    PrescribedByDoctor = am.SourceSession?.Doctor != null ? am.SourceSession.Doctor.FullName : null,
+                    SourceSessionDate = am.SourceSession != null ? am.SourceSession.VisitDate.ToString("yyyy-MM-dd") : null
                 }).ToList(),
 
                 PrescribedMedications = patient.ClinicalSessions

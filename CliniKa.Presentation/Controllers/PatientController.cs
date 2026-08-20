@@ -69,6 +69,28 @@ namespace CliniKa.Presentation.Controllers
             return BadRequest(result);
         }
 
+        [HttpPut("medical-info")]
+        [Authorize]
+        public async Task<IActionResult> UpdateMedicalInfo([FromBody] AddMedicalInfoRequest request)
+        {
+            var result = await _patientService.UpdateMedicalInfoAsync(request);
+
+            if (result.IsSuccess)
+            {
+                return Ok(result);
+            }
+            else if (result.Status == ResultStatus.NotFound)
+            {
+                return NotFound(result);
+            }
+            else if (result.Status == ResultStatus.ValidationError)
+            {
+                return BadRequest(result);
+            }
+
+            return BadRequest(result);
+        }
+
         [HttpGet("profile")]
         [Authorize]
         public async Task<IActionResult> GetPatientProfile()
