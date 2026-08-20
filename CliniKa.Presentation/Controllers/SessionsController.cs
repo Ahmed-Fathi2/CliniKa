@@ -156,6 +156,32 @@ namespace CliniKa.Presentation.Controllers
         }
 
         /// <summary>
+        /// Updates the list of prescribed medications for a patient during a clinical session.
+        /// Replaces any existing prescribed medications for this session.
+        /// </summary>
+        [HttpPut("{sessionId:int}/prescribe")]
+        [Authorize(Roles = RoleConstants.Doctor)]
+        public async Task<IActionResult> UpdatePrescribedMedications(
+            [FromRoute] int sessionId,
+            [FromBody] List<PrescribeMedicationRequest> medications)
+        {
+            if (medications == null || medications.Count == 0)
+            {
+                return BadRequest(GeneralResult.Failure("At least one medication is required."));
+            }
+
+            var result = await _sessionService.UpdatePrescribedMedicationsAsync(sessionId, medications);
+
+            if (result.IsSuccess)
+                return Ok(result);
+
+            if (result.Status == ResultStatus.NotFound)
+                return NotFound(result);
+
+            return BadRequest(result);
+        }
+
+        /// <summary>
         /// Retrieves all sessions for the authenticated doctor with optional search.
         /// </summary>
         [HttpGet("doctor-reports")]
@@ -174,6 +200,26 @@ namespace CliniKa.Presentation.Controllers
         public async Task<IActionResult> GetPrescribedMedications([FromRoute] int sessionId)
         {
             var result = await _sessionService.GetPrescribedMedicationsAsync(sessionId);
+
+            if (result.IsSuccess)
+                return Ok(result);
+
+            if (result.Status == ResultStatus.NotFound)
+                return NotFound(result);
+
+            return BadRequest(result);
+        }
+
+        /// <summary>
+        /// Deletes a specific prescribed medication from a clinical session.
+        /// </summary>
+        [HttpDelete("{sessionId:int}/prescribe/{medicationId:int}")]
+        [Authorize(Roles = RoleConstants.Doctor)]
+        public async Task<IActionResult> DeletePrescribedMedication(
+            [FromRoute] int sessionId,
+            [FromRoute] int medicationId)
+        {
+            var result = await _sessionService.DeletePrescribedMedicationAsync(sessionId, medicationId);
 
             if (result.IsSuccess)
                 return Ok(result);

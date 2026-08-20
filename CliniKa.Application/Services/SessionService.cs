@@ -464,6 +464,185 @@ namespace CliniKa.Application.Services
                 $"{resultDtos.Count} medication(s) prescribed successfully.");
         }
 
+        /// <inheritdoc />
+        public async Task<GeneralResult<List<PrescribedMedicationDto>>> UpdatePrescribedMedicationsAsync(
+            int sessionId,
+            List<PrescribeMedicationRequest> medications)
+        {
+            // 1. Validate session exists
+            var session = await _unitOfWork.ClinicalSessions.GetAsync(
+                s => s.Id == sessionId,
+                trackChanges: false);
+
+            if (session == null)
+            {
+                return GeneralResult<List<PrescribedMedicationDto>>.NotFound(
+                    $"Clinical Session with ID '{sessionId}' was not found.");
+            }
+
+            // 2. Verify the authenticated user is the doctor who owns this session
+            var userId = _currentUserService.UserId;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return GeneralResult<List<PrescribedMedicationDto>>.Failure("User is not authenticated.");
+            }
+
+            var doctor = await _unitOfWork.Doctors.GetAsync(d => d.UserId == userId);
+            if (doctor == null || doctor.Id != session.DoctorId)
+            {
+                return GeneralResult<List<PrescribedMedicationDto>>.Failure(
+                    "You are not Session's Doctor, so you are not authorized to update prescribed medications for this session.");
+            }
+
+            // 3. Validate the session is in a valid state
+            if (session.Status != "In Progress" && session.Status != "Completed" && session.Status != "Processing")
+            {
+                return GeneralResult<List<PrescribedMedicationDto>>.Failure(
+                    $"Cannot update prescribed medications for a session with status '{session.Status}'.");
+            }
+
+            // 4. Load existing prescribed medications for this session (tracked)
+            var existingMeds = (await _unitOfWork.PrescribedMedications.GetAllAsync(
+                filter: m => m.SessionId == sessionId,
+                trackChanges: true)).ToList();
+
+            var existingMedsDict = existingMeds.ToDictionary(m => m.Id);
+
+            // 5. Validate provided IDs (must exist in this session & have no duplicates)
+            var providedIds = medications
+                .Where(m => m.Id.HasValue && m.Id.Value > 0)
+                .Select(m => m.Id!.Value)
+                .ToList();
+
+            var duplicateIds = providedIds
+                .GroupBy(id => id)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .ToList();
+
+            if (duplicateIds.Count > 0)
+            {
+                return GeneralResult<List<PrescribedMedicationDto>>.Failure(
+                    $"Duplicate prescribed medication ID(s) found in request: {string.Join(", ", duplicateIds)}.");
+            }
+
+            var invalidIds = providedIds.Where(id => !existingMedsDict.ContainsKey(id)).ToList();
+            if (invalidIds.Count > 0)
+            {
+                return GeneralResult<List<PrescribedMedicationDto>>.NotFound(
+                    $"Prescribed medication ID(s) '{string.Join(", ", invalidIds)}' do not exist in this clinical session.");
+            }
+
+            // 6. Update tracked existing entities in-place and collect new ones (id is null or 0)
+            var medsToAdd = new List<PrescribedMedication>();
+            var updatedEntities = new List<PrescribedMedication>();
+
+            foreach (var req in medications)
+            {
+                if (req.Id.HasValue && req.Id.Value > 0)
+                {
+                    // Existing medication -> update tracked entity
+                    var existing = existingMedsDict[req.Id.Value];
+                    existing.DrugName = req.DrugName.Trim();
+                    existing.Dosage = req.Dosage?.Trim();
+                    existing.Frequency = req.Frequency?.Trim();
+                    existing.Duration = req.Duration?.Trim();
+                    existing.Notes = req.Notes?.Trim();
+                    updatedEntities.Add(existing);
+                }
+                else
+                {
+                    // New medication -> insert new entity
+                    var newMed = new PrescribedMedication
+                    {
+                        SessionId = sessionId,
+                        DrugName = req.DrugName.Trim(),
+                        Dosage = req.Dosage?.Trim(),
+                        Frequency = req.Frequency?.Trim(),
+                        Duration = req.Duration?.Trim(),
+                        Notes = req.Notes?.Trim()
+                    };
+                    medsToAdd.Add(newMed);
+                    updatedEntities.Add(newMed);
+                }
+            }
+
+            if (medsToAdd.Count > 0)
+            {
+                _unitOfWork.PrescribedMedications.AddRange(medsToAdd);
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+
+            // 7. Map to response DTOs
+            var resultDtos = updatedEntities.Select(e => new PrescribedMedicationDto
+            {
+                Id = e.Id,
+                DrugName = e.DrugName,
+                Dosage = e.Dosage,
+                Frequency = e.Frequency,
+                Duration = e.Duration,
+                Notes = e.Notes
+            }).ToList();
+
+            return GeneralResult<List<PrescribedMedicationDto>>.Success(
+                resultDtos,
+                $"{resultDtos.Count} medication(s) updated successfully.");
+        }
+
+        /// <inheritdoc />
+        public async Task<GeneralResult> DeletePrescribedMedicationAsync(int sessionId, int medicationId)
+        {
+            // 1. Validate session exists
+            var session = await _unitOfWork.ClinicalSessions.GetAsync(
+                s => s.Id == sessionId,
+                trackChanges: false);
+
+            if (session == null)
+            {
+                return GeneralResult.NotFound(
+                    $"Clinical Session with ID '{sessionId}' was not found.");
+            }
+
+            // 2. Verify the authenticated user is the doctor who owns this session
+            var userId = _currentUserService.UserId;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return GeneralResult.Failure("User is not authenticated.");
+            }
+
+            var doctor = await _unitOfWork.Doctors.GetAsync(d => d.UserId == userId);
+            if (doctor == null || doctor.Id != session.DoctorId)
+            {
+                return GeneralResult.Failure(
+                    "You are not Session's Doctor, so you are not authorized to delete prescribed medications for this session.");
+            }
+
+            // 3. Validate the session is in a valid state
+            if (session.Status != "In Progress" && session.Status != "Completed" && session.Status != "Processing")
+            {
+                return GeneralResult.Failure(
+                    $"Cannot delete prescribed medications for a session with status '{session.Status}'.");
+            }
+
+            // 4. Find the prescribed medication
+            var medication = await _unitOfWork.PrescribedMedications.GetAsync(
+                filter: m => m.Id == medicationId && m.SessionId == sessionId,
+                trackChanges: true);
+
+            if (medication == null)
+            {
+                return GeneralResult.NotFound(
+                    $"Prescribed medication with ID '{medicationId}' was not found in this clinical session.");
+            }
+
+            // 5. Delete and save
+            _unitOfWork.PrescribedMedications.Delete(medication);
+            await _unitOfWork.SaveChangesAsync();
+
+            return GeneralResult.Success("Prescribed medication deleted successfully.");
+        }
+
         private void RegisterUploadedDocuments(
             ClinicalSession session,
             List<(IFormFile File, string SavedUrl)> uploadedDocs)
