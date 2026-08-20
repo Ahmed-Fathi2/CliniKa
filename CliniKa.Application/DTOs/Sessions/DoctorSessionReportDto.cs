@@ -12,8 +12,8 @@ namespace CliniKa.Application.DTOs.Sessions
         public DateTime VisitDate { get; set; }
         public string Status { get; set; } = string.Empty;
         public string? FinalDiagnosis { get; set; }
-        public string? PossibleDiagnoses { get; set; }
-        public string? PatientSummary { get; set; }
+        public string? PossibleDiagnosis { get; set; }
+        public string? HistoryOfPresentIllness { get; set; }
         public bool HasAiReport { get; set; }
         public int PrescribedMedicationsCount { get; set; }
     }

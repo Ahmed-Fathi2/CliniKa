@@ -14,10 +14,6 @@ namespace CliniKa.Application.DTOs.Patient
         public string Status { get; set; } = string.Empty;
         public DateTime? FinalizedAt { get; set; }
 
-        public string? AudioTranscript { get; set; }
-        public string? ExtractedSymptoms { get; set; }
-        public string? MentionedMedications { get; set; }
-        public string? MentionedHistory { get; set; }
         public string? FinalDiagnosis { get; set; }
         public string? DoctorNotes { get; set; }
         public string? FollowUpRecommendations { get; set; }
