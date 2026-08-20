@@ -9,10 +9,6 @@ namespace CliniKa.Domain.Entities
         public int PatientId { get; set; }
         public int DoctorId { get; set; }
         public DateTime VisitDate { get; set; } = DateTime.UtcNow;
-        public string? AudioTranscript { get; set; }
-        public string? ExtractedSymptoms { get; set; }
-        public string? MentionedMedications { get; set; }
-        public string? MentionedHistory { get; set; }
         public string? FinalDiagnosis { get; set; }
         public string? DoctorNotes { get; set; }
         public string? FollowUpRecommendations { get; set; }
@@ -29,5 +25,7 @@ namespace CliniKa.Domain.Entities
         public virtual ICollection<ActiveMedication> ActiveMedications { get; set; } = new List<ActiveMedication>();
         public virtual ICollection<PrescribedMedication> PrescribedMedications { get; set; } = new List<PrescribedMedication>();
         public virtual ICollection<SessionFinding> SessionFindings { get; set; } = new List<SessionFinding>();
+        public virtual ICollection<SessionDifferentialDiagnosis> DifferentialDiagnoses { get; set; } = new List<SessionDifferentialDiagnosis>();
+        public virtual ICollection<SessionRecommendedInvestigation> RecommendedInvestigations { get; set; } = new List<SessionRecommendedInvestigation>();
     }
 }
