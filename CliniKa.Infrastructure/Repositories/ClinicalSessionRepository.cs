@@ -29,6 +29,8 @@ namespace CliniKa.Infrastructure.Repositories
                 .Include(cs => cs.PrescribedMedications)
                 .Include(cs => cs.UploadedDocuments)
                 .Include(cs => cs.SessionAiReport)
+                .Include(cs => cs.RecommendedInvestigations)
+                .Include(cs => cs.DifferentialDiagnoses)
                 .Where(cs => cs.Id == sessionId && cs.Patient.UserId == userId)
                 .AsNoTracking()
                 .FirstOrDefaultAsync();
