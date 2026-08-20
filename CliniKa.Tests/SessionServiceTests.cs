@@ -18,6 +18,8 @@ namespace CliniKa.Tests
         private readonly Mock<IDoctorRepository> _mockDoctorRepo;
         private readonly Mock<IPrescribedMedicationsRepository> _mockPrescribedRepo;
         private readonly Mock<IActiveMedicationsRepository> _mockActiveMedicationsRepo;
+        private readonly Mock<ISessionDifferentialDiagnosisRepository> _mockDiffRepo;
+        private readonly Mock<ISessionRecommendedInvestigationRepository> _mockRecInvestRepo;
         private readonly Mock<ILangFlowService> _mockLangFlowService;
         private readonly Mock<IFileService> _mockFileService;
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
@@ -30,6 +32,8 @@ namespace CliniKa.Tests
             _mockDoctorRepo = new Mock<IDoctorRepository>();
             _mockPrescribedRepo = new Mock<IPrescribedMedicationsRepository>();
             _mockActiveMedicationsRepo = new Mock<IActiveMedicationsRepository>();
+            _mockDiffRepo = new Mock<ISessionDifferentialDiagnosisRepository>();
+            _mockRecInvestRepo = new Mock<ISessionRecommendedInvestigationRepository>();
             _mockLangFlowService = new Mock<ILangFlowService>();
             _mockFileService = new Mock<IFileService>();
             _mockUnitOfWork = new Mock<IUnitOfWork>();
@@ -39,6 +43,8 @@ namespace CliniKa.Tests
             _mockUnitOfWork.Setup(u => u.Doctors).Returns(_mockDoctorRepo.Object);
             _mockUnitOfWork.Setup(u => u.PrescribedMedications).Returns(_mockPrescribedRepo.Object);
             _mockUnitOfWork.Setup(u => u.ActiveMedications).Returns(_mockActiveMedicationsRepo.Object);
+            _mockUnitOfWork.Setup(u => u.SessionDifferentialDiagnoses).Returns(_mockDiffRepo.Object);
+            _mockUnitOfWork.Setup(u => u.SessionRecommendedInvestigations).Returns(_mockRecInvestRepo.Object);
 
             _sessionService = new SessionService(
                 _mockLangFlowService.Object,
@@ -140,7 +146,7 @@ namespace CliniKa.Tests
         }
 
         [Fact]
-        public async Task SaveDiagnosisCallbackResultAsync_ShouldUpdateSessionAndAiReport_WhenSuccessful()
+        public async Task SaveDiagnosisCallbackResultAsync_ShouldUpdateSessionAndAiReportAndSaveDifferentialDiagnoses_WhenSuccessful()
         {
             var sessionId = 123;
             var session = new ClinicalSession
@@ -157,16 +163,43 @@ namespace CliniKa.Tests
                 It.IsAny<Expression<Func<ClinicalSession, object>>[]>()
             )).ReturnsAsync(session);
 
+            _mockDiffRepo.Setup(r => r.GetAllAsync(
+                It.IsAny<Expression<Func<SessionDifferentialDiagnosis, bool>>>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<SessionDifferentialDiagnosis, object>>[]>()
+            )).ReturnsAsync(new List<SessionDifferentialDiagnosis>());
+
+            _mockRecInvestRepo.Setup(r => r.GetAllAsync(
+                It.IsAny<Expression<Func<SessionRecommendedInvestigation, bool>>>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<SessionRecommendedInvestigation, object>>[]>()
+            )).ReturnsAsync(new List<SessionRecommendedInvestigation>());
+
             var callbackResult = new LangFlowDiagnosisResult
             {
                 Status = 200,
                 Body = new LangFlowDiagnosisResultBody
                 {
                     Transcript = "Doctor: Hello. Patient: Hello doctor.",
-                    Analysis = "Some analysis",
+                    Analysis = "Clinical evaluation notes",
                     ChiefComplaint = "Fever and cough",
                     HistoryOfPresentIllness = "Feeling unwell for 4 days",
-                    PossibleDiagnosis = "Viral infection",
+                    CompleteFindingsFromAllMedicalImages = "Normal chest radiograph",
+                    PossibleDiagnosis = "Viral upper respiratory infection",
+                    Top5DifferentialDiagnoses = new List<string>
+                    {
+                        "Acute Bronchitis",
+                        "Influenza",
+                        "COVID-19",
+                        "Pneumonia",
+                        "Common Cold"
+                    },
+                    RecommendedInvestigations = new List<string> { "CBC", "Influenza swab" },
+                    ImmediateManagement = "Rest and hydration",
                     ImagesReceived = 1
                 }
             };
@@ -177,14 +210,126 @@ namespace CliniKa.Tests
 
             Assert.True(result.IsSuccess);
             Assert.Equal("Completed", session.Status);
-            Assert.Equal("Doctor: Hello. Patient: Hello doctor.", session.AudioTranscript);
-            Assert.Equal("Fever and cough", session.ExtractedSymptoms);
 
             Assert.NotNull(session.SessionAiReport);
-            Assert.Equal("Feeling unwell for 4 days", session.SessionAiReport.PatientSummary);
-            Assert.Equal("Viral infection", session.SessionAiReport.PossibleDiagnoses);
+            Assert.Equal("Doctor: Hello. Patient: Hello doctor.", session.SessionAiReport.Transcript);
+            Assert.Equal("Clinical evaluation notes", session.SessionAiReport.Analysis);
+            Assert.Equal("Fever and cough", session.SessionAiReport.ChiefComplaint);
+            Assert.Equal("Feeling unwell for 4 days", session.SessionAiReport.HistoryOfPresentIllness);
+            Assert.Equal("Normal chest radiograph", session.SessionAiReport.CompleteFindingsFromAllMedicalImages);
+            Assert.Equal("Viral upper respiratory infection", session.SessionAiReport.PossibleDiagnosis);
+            Assert.Equal("Rest and hydration", session.SessionAiReport.ImmediateManagement);
+            Assert.Equal(1, session.SessionAiReport.ImagesReceived);
+
+            _mockDiffRepo.Verify(r => r.AddRange(It.Is<List<SessionDifferentialDiagnosis>>(list =>
+                list.Count == 5 &&
+                list[0].Diagnosis == "Acute Bronchitis" && list[0].Rank == 1 &&
+                list[4].Diagnosis == "Common Cold" && list[4].Rank == 5
+            )), Times.Once);
+
+            _mockRecInvestRepo.Verify(r => r.AddRange(It.Is<List<SessionRecommendedInvestigation>>(list =>
+                list.Count == 2 &&
+                list[0].Investigation == "CBC" && list[0].Order == 1 &&
+                list[1].Investigation == "Influenza swab" && list[1].Order == 2
+            )), Times.Once);
 
             _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetSessionDiagnosisAsync_ShouldReturnNotFound_WhenSessionDoesNotExist()
+        {
+            _mockSessionRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<ClinicalSession, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<ClinicalSession, object>>[]>()
+            )).ReturnsAsync((ClinicalSession?)null);
+
+            var result = await _sessionService.GetSessionDiagnosisAsync(999);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal(ResultStatus.NotFound, result.Status);
+        }
+
+        [Fact]
+        public async Task GetSessionDiagnosisAsync_ShouldReturnCallbackFormatResponse_WhenSessionExists()
+        {
+            var sessionId = 123;
+            var session = new ClinicalSession
+            {
+                Id = sessionId,
+                Status = "Completed",
+                SessionAiReport = new SessionAiReport
+                {
+                    SessionId = sessionId,
+                    Transcript = "Doctor transcript",
+                    Analysis = "Detailed analysis",
+                    ChiefComplaint = "Cough",
+                    HistoryOfPresentIllness = "Started 2 days ago",
+                    CompleteFindingsFromAllMedicalImages = "Clear lungs",
+                    PossibleDiagnosis = "Bronchitis",
+                    ImmediateManagement = "Inhaler as needed",
+                    ImagesReceived = 2
+                },
+                DifferentialDiagnoses = new List<SessionDifferentialDiagnosis>
+                {
+                    new SessionDifferentialDiagnosis { SessionId = sessionId, Diagnosis = "Bronchitis", Rank = 1 },
+                    new SessionDifferentialDiagnosis { SessionId = sessionId, Diagnosis = "Asthma", Rank = 2 },
+                    new SessionDifferentialDiagnosis { SessionId = sessionId, Diagnosis = "GERD", Rank = 3 },
+                    new SessionDifferentialDiagnosis { SessionId = sessionId, Diagnosis = "Pneumonia", Rank = 4 },
+                    new SessionDifferentialDiagnosis { SessionId = sessionId, Diagnosis = "Post-nasal drip", Rank = 5 }
+                },
+                RecommendedInvestigations = new List<SessionRecommendedInvestigation>
+                {
+                    new SessionRecommendedInvestigation { SessionId = sessionId, Investigation = "Chest X-ray", Order = 1 },
+                    new SessionRecommendedInvestigation { SessionId = sessionId, Investigation = "CBC", Order = 2 }
+                }
+            };
+
+            _mockSessionRepo.Setup(r => r.GetAsync(
+                It.IsAny<Expression<Func<ClinicalSession, bool>>>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<ClinicalSession, object>>[]>()
+            )).ReturnsAsync(session);
+
+            _mockDiffRepo.Setup(r => r.GetAllAsync(
+                It.IsAny<Expression<Func<SessionDifferentialDiagnosis, bool>>>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<SessionDifferentialDiagnosis, object>>[]>()
+            )).ReturnsAsync(session.DifferentialDiagnoses.ToList());
+
+            _mockRecInvestRepo.Setup(r => r.GetAllAsync(
+                It.IsAny<Expression<Func<SessionRecommendedInvestigation, bool>>>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                It.IsAny<Expression<Func<SessionRecommendedInvestigation, object>>[]>()
+            )).ReturnsAsync(session.RecommendedInvestigations.ToList());
+
+            var result = await _sessionService.GetSessionDiagnosisAsync(sessionId);
+
+            Assert.True(result.IsSuccess);
+            Assert.NotNull(result.Data);
+            Assert.Equal(200, result.Data.Status);
+            Assert.NotNull(result.Data.Body);
+            Assert.Equal("Doctor transcript", result.Data.Body.Transcript);
+            Assert.Equal("Detailed analysis", result.Data.Body.Analysis);
+            Assert.Equal("Cough", result.Data.Body.ChiefComplaint);
+            Assert.Equal("Started 2 days ago", result.Data.Body.HistoryOfPresentIllness);
+            Assert.Equal("Clear lungs", result.Data.Body.CompleteFindingsFromAllMedicalImages);
+            Assert.Equal("Bronchitis", result.Data.Body.PossibleDiagnosis);
+            Assert.Equal("Inhaler as needed", result.Data.Body.ImmediateManagement);
+            Assert.Equal(2, result.Data.Body.ImagesReceived);
+
+            Assert.Equal(5, result.Data.Body.Top5DifferentialDiagnoses?.Count);
+            Assert.Equal("Bronchitis", result.Data.Body.Top5DifferentialDiagnoses?[0]);
+            Assert.Equal("Post-nasal drip", result.Data.Body.Top5DifferentialDiagnoses?[4]);
+
+            Assert.Equal(2, result.Data.Body.RecommendedInvestigations?.Count);
+            Assert.Equal("Chest X-ray", result.Data.Body.RecommendedInvestigations?[0]);
+            Assert.Equal("CBC", result.Data.Body.RecommendedInvestigations?[1]);
         }
 
         [Fact]

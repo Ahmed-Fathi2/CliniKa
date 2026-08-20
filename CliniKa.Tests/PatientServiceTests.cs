@@ -506,8 +506,8 @@ namespace CliniKa.Tests
                 SessionAiReport = new SessionAiReport
                 {
                     Id = 50,
-                    PatientSummary = "Patient presents with skin rash.",
-                    ClinicalAlerts = "No severe drug interactions detected."
+                    HistoryOfPresentIllness = "Patient presents with skin rash.",
+                    ImmediateManagement = "No severe drug interactions detected."
                 }
             };
 
@@ -531,7 +531,7 @@ namespace CliniKa.Tests
             Assert.Single(result.Data.UploadedDocuments);
             Assert.Equal("LabResult", result.Data.UploadedDocuments.First().DocumentType);
             Assert.NotNull(result.Data.AiReport);
-            Assert.Equal("Patient presents with skin rash.", result.Data.AiReport.PatientSummary);
+            Assert.Equal("Patient presents with skin rash.", result.Data.AiReport.HistoryOfPresentIllness);
         }
 
         [Fact]
