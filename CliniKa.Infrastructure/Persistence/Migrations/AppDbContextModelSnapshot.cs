@@ -143,16 +143,10 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AudioTranscript")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("DoctorId")
                         .HasColumnType("int");
 
                     b.Property<string>("DoctorNotes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ExtractedSymptoms")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FinalDiagnosis")
@@ -163,12 +157,6 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("FollowUpRecommendations")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("MentionedHistory")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("MentionedMedications")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("PatientId")
@@ -455,13 +443,13 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ClinicalAlerts")
+                    b.Property<string>("Analysis")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Contraindications")
+                    b.Property<string>("ChiefComplaint")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("DrugInteractions")
+                    b.Property<string>("CompleteFindingsFromAllMedicalImages")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("GeneratedAt")
@@ -469,16 +457,22 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("GETDATE()");
 
-                    b.Property<string>("PatientSummary")
+                    b.Property<string>("HistoryOfPresentIllness")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PossibleDiagnoses")
+                    b.Property<int?>("ImagesReceived")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ImmediateManagement")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PossibleDiagnosis")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("SessionId")
                         .HasColumnType("int");
 
-                    b.Property<string>("SuggestedInvestigations")
+                    b.Property<string>("Transcript")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -487,6 +481,41 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("SessionAIReports", (string)null);
+                });
+
+            modelBuilder.Entity("CliniKa.Domain.Entities.SessionDifferentialDiagnosis", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<string>("Diagnosis")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("Rank")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SessionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("idx_differential_diagnoses_session");
+
+                    b.HasIndex("SessionId", "Rank")
+                        .HasDatabaseName("idx_differential_diagnoses_session_rank");
+
+                    b.ToTable("SessionDifferentialDiagnoses", (string)null);
                 });
 
             modelBuilder.Entity("CliniKa.Domain.Entities.SessionFinding", b =>
@@ -531,6 +560,41 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("idx_findings_session");
 
                     b.ToTable("SessionFindings", (string)null);
+                });
+
+            modelBuilder.Entity("CliniKa.Domain.Entities.SessionRecommendedInvestigation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<string>("Investigation")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("Order")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SessionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("idx_recommended_investigations_session");
+
+                    b.HasIndex("SessionId", "Order")
+                        .HasDatabaseName("idx_recommended_investigations_session_order");
+
+                    b.ToTable("SessionRecommendedInvestigations", (string)null);
                 });
 
             modelBuilder.Entity("CliniKa.Domain.Entities.UploadedDocument", b =>
@@ -1035,10 +1099,32 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                     b.Navigation("ClinicalSession");
                 });
 
+            modelBuilder.Entity("CliniKa.Domain.Entities.SessionDifferentialDiagnosis", b =>
+                {
+                    b.HasOne("CliniKa.Domain.Entities.ClinicalSession", "ClinicalSession")
+                        .WithMany("DifferentialDiagnoses")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ClinicalSession");
+                });
+
             modelBuilder.Entity("CliniKa.Domain.Entities.SessionFinding", b =>
                 {
                     b.HasOne("CliniKa.Domain.Entities.ClinicalSession", "ClinicalSession")
                         .WithMany("SessionFindings")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ClinicalSession");
+                });
+
+            modelBuilder.Entity("CliniKa.Domain.Entities.SessionRecommendedInvestigation", b =>
+                {
+                    b.HasOne("CliniKa.Domain.Entities.ClinicalSession", "ClinicalSession")
+                        .WithMany("RecommendedInvestigations")
                         .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1132,11 +1218,15 @@ namespace CliniKa.Infrastructure.Persistence.Migrations
                 {
                     b.Navigation("ActiveMedications");
 
+                    b.Navigation("DifferentialDiagnoses");
+
                     b.Navigation("PatientAllergies");
 
                     b.Navigation("PatientDiseases");
 
                     b.Navigation("PrescribedMedications");
+
+                    b.Navigation("RecommendedInvestigations");
 
                     b.Navigation("SessionAiReport");
 
