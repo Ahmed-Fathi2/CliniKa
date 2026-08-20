@@ -11,6 +11,8 @@ namespace CliniKa.Domain.Repositories
         IPrescribedMedicationsRepository PrescribedMedications { get; }
         IActiveMedicationsRepository ActiveMedications { get; }
         ISessionAIReportsRepository SessionAIReports { get; }
+        ISessionDifferentialDiagnosisRepository SessionDifferentialDiagnoses { get; }
+        ISessionRecommendedInvestigationRepository SessionRecommendedInvestigations { get; }
         IChatSessionRepository ChatSessions { get; }
         IDiseaseRepository Diseases { get; }
         IAllergyRepository Allergies { get; }
