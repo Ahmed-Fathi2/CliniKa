@@ -172,6 +172,40 @@ namespace CliniKa.Infrastructure.Services
             return GeneralResult<UserDto>.Success(userDto, "User retrieved successfully.");
         }
 
+        public async Task<GeneralResult<UserDto>> UpdateUserProfileAsync(string id, string firstName, string lastName, string? phoneNumber)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                return GeneralResult<UserDto>.NotFound($"User with ID '{id}' was not found.");
+            }
+
+            user.FirstName = firstName.Trim();
+            user.LastName = lastName.Trim();
+            user.PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber.Trim();
+
+            var updateResult = await _userManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                var errors = updateResult.Errors.Select(e => e.Description);
+                return GeneralResult<UserDto>.Failure(string.Join("; ", errors));
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var userDto = new UserDto
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email ?? string.Empty,
+                PhoneNumber = user.PhoneNumber,
+                IsActive = user.IsActive,
+                Roles = roles
+            };
+
+            return GeneralResult<UserDto>.Success(userDto, "User profile updated successfully.");
+        }
+
         public async Task<GeneralResult> SetUserActiveStatusAsync(string id, bool isActive)
         {
             var user = await _userManager.FindByIdAsync(id);

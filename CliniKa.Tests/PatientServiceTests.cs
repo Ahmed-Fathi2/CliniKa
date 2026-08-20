@@ -1,3 +1,4 @@
+using CliniKa.Application;
 using CliniKa.Application.Abstractions.Authentication;
 using CliniKa.Application.Abstractions.Services;
 using CliniKa.Application.DTOs.Patient;
@@ -17,6 +18,7 @@ namespace CliniKa.Tests
         private readonly Mock<IUnitOfWork> _unitOfWorkMock;
         private readonly Mock<IPatientRepository> _patientRepoMock;
         private readonly Mock<IValidator<AddMedicalInfoRequest>> _addMedicalInfoValidatorMock;
+        private readonly Mock<IValidator<UpdatePatientPersonalInfoRequest>> _updatePersonalInfoValidatorMock;
         private readonly Mock<ICurrentUserService> _currentUserServiceMock;
         private readonly Mock<IUserService> _userServiceMock;
         private readonly PatientService _patientService;
@@ -26,6 +28,7 @@ namespace CliniKa.Tests
             _unitOfWorkMock = new Mock<IUnitOfWork>();
             _patientRepoMock = new Mock<IPatientRepository>();
             _addMedicalInfoValidatorMock = new Mock<IValidator<AddMedicalInfoRequest>>();
+            _updatePersonalInfoValidatorMock = new Mock<IValidator<UpdatePatientPersonalInfoRequest>>();
             _currentUserServiceMock = new Mock<ICurrentUserService>();
             _userServiceMock = new Mock<IUserService>();
 
@@ -37,6 +40,7 @@ namespace CliniKa.Tests
             _patientService = new PatientService(
                 _unitOfWorkMock.Object,
                 _addMedicalInfoValidatorMock.Object,
+                _updatePersonalInfoValidatorMock.Object,
                 _currentUserServiceMock.Object,
                 _userServiceMock.Object);
         }
@@ -547,6 +551,88 @@ namespace CliniKa.Tests
             Assert.NotNull(result);
             Assert.False(result.IsSuccess);
             Assert.Equal(CliniKa.Application.ResultStatus.NotFound, result.Status);
+        }
+
+        [Fact]
+        public async Task UpdatePatientPersonalInfoAsync_WhenValid_UpdatesUserAndPatientAndReturnsProfile()
+        {
+            // Arrange
+            var userId = "user-123";
+            var request = new UpdatePatientPersonalInfoRequest
+            {
+                FirstName = "Ahmed",
+                LastName = "Ali",
+                PhoneNumber = "01012345678"
+            };
+
+            _updatePersonalInfoValidatorMock.Setup(v => v.ValidateAsync(request, default))
+                .ReturnsAsync(new ValidationResult());
+
+            _currentUserServiceMock.Setup(c => c.UserId).Returns(userId);
+
+            var updatedUserDto = new UserDto
+            {
+                Id = userId,
+                FirstName = "Ahmed",
+                LastName = "Ali",
+                Email = "ahmed@example.com",
+                PhoneNumber = "01012345678"
+            };
+
+            _userServiceMock.Setup(s => s.UpdateUserProfileAsync(userId, request.FirstName, request.LastName, request.PhoneNumber))
+                .ReturnsAsync(GeneralResult<UserDto>.Success(updatedUserDto));
+
+            var patient = new Patient
+            {
+                Id = 10,
+                UserId = userId,
+                FullName = "Old Name"
+            };
+
+            _patientRepoMock.Setup(r => r.GetAsync(It.IsAny<Expression<Func<Patient, bool>>>(), true, It.IsAny<Expression<Func<Patient, object>>[]>()))
+                .ReturnsAsync(patient);
+
+            _unitOfWorkMock.Setup(u => u.SaveChangesAsync()).ReturnsAsync(1);
+
+            // Act
+            var result = await _patientService.UpdatePatientPersonalInfoAsync(request);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.True(result.IsSuccess);
+            Assert.NotNull(result.Data);
+            Assert.Equal("Ahmed", result.Data.FirstName);
+            Assert.Equal("Ali", result.Data.LastName);
+            Assert.Equal("ahmed@example.com", result.Data.Email);
+            Assert.Equal("01012345678", result.Data.PhoneNumber);
+            Assert.Equal("Ahmed Ali", patient.FullName);
+        }
+
+        [Fact]
+        public async Task UpdatePatientPersonalInfoAsync_WhenValidationFails_ReturnsValidationFailure()
+        {
+            // Arrange
+            var request = new UpdatePatientPersonalInfoRequest
+            {
+                FirstName = "",
+                LastName = ""
+            };
+
+            var failures = new List<ValidationFailure>
+            {
+                new ValidationFailure("FirstName", "First name is required.")
+            };
+
+            _updatePersonalInfoValidatorMock.Setup(v => v.ValidateAsync(request, default))
+                .ReturnsAsync(new ValidationResult(failures));
+
+            // Act
+            var result = await _patientService.UpdatePatientPersonalInfoAsync(request);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.False(result.IsSuccess);
+            Assert.Equal(CliniKa.Application.ResultStatus.ValidationError, result.Status);
         }
     }
 }

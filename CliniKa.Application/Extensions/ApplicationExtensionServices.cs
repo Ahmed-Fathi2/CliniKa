@@ -34,6 +34,7 @@ namespace CliniKa.Application.Extensions
             services.AddScoped<IValidator<UpdateDiseaseRequest>, UpdateDiseaseRequestValidator>();
             services.AddScoped<IValidator<CreateAllergyRequest>, CreateAllergyRequestValidator>();
             services.AddScoped<IValidator<UpdateAllergyRequest>, UpdateAllergyRequestValidator>();
+            services.AddScoped<IValidator<UpdatePatientPersonalInfoRequest>, UpdatePatientPersonalInfoRequestValidator>();
 
             // Mapster configuration
             var config = TypeAdapterConfig.GlobalSettings;

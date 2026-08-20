@@ -9,6 +9,7 @@ namespace CliniKa.Application.Abstractions.Services
         Task<GeneralResult<UserDto>> CreateUserAsync(CreateUserRequest request);
         Task<GeneralResult<IEnumerable<UserDto>>> GetAllUsersAsync();
         Task<GeneralResult<UserDto>> GetUserByIdAsync(string id);
+        Task<GeneralResult<UserDto>> UpdateUserProfileAsync(string id, string firstName, string lastName, string? phoneNumber);
         Task<GeneralResult> ActivateUserAsync(string id);
         Task<GeneralResult> DeactivateUserAsync(string id);
         Task<GeneralResult> SetUserActiveStatusAsync(string id, bool isActive);
